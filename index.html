@@ -233,7 +233,25 @@
         <div id="warningText">¡ALGO GORDO SE ACERCA!</div>
     </div>
 
-    <div id="startScreen" class="screen">
+    <!-- PANTALLA DE LOGIN -->
+    <div id="loginScreen" class="screen">
+        <h1 class="text-5xl font-bold mb-8 text-green-400">Reel Defender</h1>
+        <input type="text" id="playerNameInput" placeholder="Tu nombre..." class="px-4 py-3 text-xl text-black rounded-lg mb-6 text-center font-bold outline-none border-4 border-transparent focus:border-green-400" maxlength="12" autocomplete="off">
+        <button class="btn" onclick="goToTutorial()">Jugar</button>
+        <button class="btn btn-purple" onclick="showRanking()">Ver Ranking Top 10</button>
+    </div>
+
+    <!-- PANTALLA DE RANKING -->
+    <div id="rankingScreen" class="screen hidden">
+        <h1 class="text-4xl font-bold mb-6 text-yellow-400">Top 10 Sobrevivientes</h1>
+        <div id="rankingList" class="bg-gray-800 p-6 rounded-lg mb-6 w-80 min-h-[300px] flex flex-col gap-3 shadow-lg shadow-yellow-900/20">
+            <p class="text-center text-gray-400">Cargando ranking...</p>
+        </div>
+        <button class="btn" onclick="hideRanking()">Volver</button>
+    </div>
+
+    <!-- PANTALLA DEL TUTORIAL (START) -->
+    <div id="startScreen" class="screen hidden">
         <h1 class="text-5xl font-bold mb-4 text-green-400">Reel Defender</h1>
         <p class="text-lg max-w-2xl mb-4">Estás viendo reels en la cama a las 3 AM. No estás solo.</p>
         <div class="controls-hint text-xl font-bold">
@@ -344,9 +362,16 @@
         imgMonster11, imgMonster12, imgMonster13
     ];
 
-    // ---------------------------------
-    
+    // --- NUEVAS VARIABLES PARA EL RANKING ---
+    let playerName = "";
+    const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbxp-8jd8As2Gr1SN_rgSoh0TmIePSQgJnOzZ3qzGne8WmTdHO9wK-o8ExVkk8tRnUfn/exec"; 
+
     // UI Elements
+    const loginScreen = document.getElementById('loginScreen');
+    const rankingScreen = document.getElementById('rankingScreen');
+    const playerNameInput = document.getElementById('playerNameInput');
+    const rankingList = document.getElementById('rankingList');
+    
     const startScreen = document.getElementById('startScreen');
     const level2Screen = document.getElementById('level2Screen');
     const level3Screen = document.getElementById('level3Screen');
@@ -414,7 +439,6 @@
         });
         reelAudios.push(a);
     });
-    // -----------------------------------------
 
     // Web Audio API
     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -515,7 +539,7 @@
 
     // Estado del juego
     let gameState = 'MENU'; 
-    let lastTime = 0; // Modificado para evitar desfasajes temporales en reinicios
+    let lastTime = 0; 
     let timeSurvived = 0; 
     let level2StartTime = 0; 
     let level3StartTime = 0;
@@ -568,7 +592,7 @@
     let maxMonsters = 1;
 
     function formatTime(ms) {
-        let totalSeconds = Math.floor(Math.max(0, ms) / 1000); // Math.max evita negativos
+        let totalSeconds = Math.floor(Math.max(0, ms) / 1000);
         let minutes = Math.floor(totalSeconds / 60);
         let seconds = totalSeconds % 60;
         let milis = Math.floor((Math.max(0, ms) % 1000) / 10);
@@ -588,7 +612,7 @@
     }
 
     function resetGame() {
-        startScreen.classList.remove('hidden');
+        loginScreen.classList.remove('hidden');
         gameOverScreen.classList.add('hidden');
         mainUI.style.opacity = '0';
         gameState = 'MENU';
@@ -643,7 +667,7 @@
         globalSpawnTimer = 2000;
         warningText.style.opacity = '0';
         
-        lastTime = 0; // Forzamos inicialización sincronizada en gameLoop
+        lastTime = 0; 
         requestAnimationFrame(gameLoop);
         
         synth.init();
@@ -659,7 +683,6 @@
         rightBatteryWrapper.classList.remove('hidden');
         leftBatteryWrapper.querySelector('.text-xs').textContent = "BATERÍA IZQ.";
         
-        // Al probar directo, ocultamos estrellas y reloj principal, mostramos solo supervivencia
         timerDisplay.classList.add('hidden');
         survivalTimerDisplay.classList.remove('hidden'); 
         levelIndicator.classList.add('hidden');
@@ -736,7 +759,7 @@
         leftBatteryWrapper.querySelector('.text-xs').textContent = "BATERÍA IZQ.";
         
         level2StartTime = timeSurvived; 
-        globalSpawnTimer = 3000; // 3 segundos sin monstruos al comienzo
+        globalSpawnTimer = 3000; 
         maxMonsters = 2; 
         
         lastSpawnSide = 'none';
@@ -803,6 +826,8 @@
     }
 
     function gameOver() {
+        enviarPuntaje();
+
         gameState = 'GAMEOVER';
         synth.stopBGM();
         windSound.pause();
@@ -811,7 +836,6 @@
         mainUI.style.opacity = '0';
         gameOverScreen.classList.remove('hidden');
         
-        // Estilos dinámicos para la pantalla de Game Over dependiendo del nivel y modo
         if (level === 3) {
             gameOverTitle.textContent = "SUPERVIVENCIA TERMINADA";
             gameOverTitle.className = "text-5xl font-bold mb-2 text-purple-500 uppercase text-center";
@@ -842,11 +866,9 @@
         let behavior = Math.random();
 
         let allowedSpawns = [0, 1, 3]; 
-        // Aparecen antes en el nivel 1 ya que ahora es mas corto
         if (level >= 2 || timeSurvived >= 15000) allowedSpawns.push(2); 
         if (level >= 2 || timeSurvived >= 25000) allowedSpawns.push(4, 5); 
 
-        // En la fase 2 del boss 2, prohibimos abajo der/izq y techo. Solo quedan Ventana (0) y Puerta (3)
         if (level === 2 && boss.state === 'WALKING' && boss.phase === 2) {
             allowedSpawns = [0, 3];
         }
@@ -929,7 +951,6 @@
     function gameLoop(timestamp) {
         if (gameState !== 'PLAYING') return;
         
-        // Sincronización perfecta de fotogramas (evita dt negativos o saltos inmensos)
         if (lastTime === 0) lastTime = timestamp;
         
         const dt = timestamp - lastTime;
@@ -971,7 +992,6 @@
                 audioCar.volume = 0.8; 
                 audioCar.play().catch(e=>console.log(e));
             }
-            // El pollo vuelve al Nivel 1, al segundo 30
             if (timeSurvived >= 30000 && !eventChicken.triggered) {
                 eventChicken.triggered = true;
                 eventChicken.active = true;
@@ -991,7 +1011,6 @@
         }
 
         let showPreBossWarning = false;
-        // Tiempos ajustados: Nivel 1 boss en 55s (aviso a los 40s). Nivel 2 boss en 85s (aviso a los 70s).
         if (level === 1 && timeSurvived >= 40000 && timeSurvived <= 45000) showPreBossWarning = true; 
         if (level === 2 && lvl2Elapsed >= 70000 && lvl2Elapsed <= 75000) showPreBossWarning = true; 
 
@@ -1016,7 +1035,6 @@
 
         let batteryRegenRate = 15; 
         if (level === 2) {
-            // Ajustado al tiempo relativo del nivel 2 (~55 segs adentro)
             if (lvl2Elapsed >= 55000) { 
                 maxMonsters = 3;
                 batteryRegenRate = 22; 
@@ -1073,7 +1091,6 @@
 
         if (level === 1) {
             let seconds = timeSurvived / 1000;
-            // Escala de dificultad mas rapida para nivel 1 reducido
             difficulty = 1 + (seconds * 0.025); 
             if (seconds > 40) difficulty += (seconds - 40) * 0.025;   
             difficulty = Math.min(difficulty, 6.0); 
@@ -1088,12 +1105,10 @@
             difficulty = baseDifficulty * Math.pow(1.15, intervals20s); 
         }
 
-        // Boss Nivel 1 (Aparece a los 55s)
         if (level === 1 && timeSurvived >= 55000 && boss.state === 'NONE') {
             boss.state = 'INTRO'; boss.timer = 10000; boss.phase = 1; boss.hp = 50; boss.maxHp = 50;
         }
 
-        // Boss Nivel 2 (Aparece a los 85s relativos al nivel 2)
         if (level === 2 && lvl2Elapsed >= 85000 && boss.state === 'NONE') {
             boss.state = 'INTRO'; 
             boss.timer = 5000; 
@@ -1149,7 +1164,7 @@
                             if (level === 1) {
                                 boss.hp = 100; boss.maxHp = 100; 
                             } else if (level === 2) {
-                                boss.hp = 370; boss.maxHp = 370; // Vida aumentada (+100 puntos extra)
+                                boss.hp = 370; boss.maxHp = 370; 
                                 boss.spawnIdx = 1; 
                                 lightningFlash = 2.0; 
                                 boss.cooldown = 1000; 
@@ -1181,7 +1196,7 @@
                 spawnMonster();
                 
                 if (level === 1) {
-                    let progress = Math.min(1, timeSurvived / 50000); // Acortado a 50s
+                    let progress = Math.min(1, timeSurvived / 50000); 
                     let baseTimer = lerp(2500, 300, progress) + Math.random() * lerp(1500, 300, progress);
                     globalSpawnTimer = baseTimer / difficulty;
                 } else if (level === 2) {
@@ -1257,7 +1272,6 @@
             }
         }
 
-        // Solo mostrar la advertencia base durante los primeros 15 segundos del nivel 1
         if (anyWarning && level === 1 && timeSurvived <= 15000) {
             warningText.style.opacity = 0.5 + Math.sin(Date.now() / 80) * 0.5;
         } else {
@@ -1279,12 +1293,10 @@
         ctx.shadowBlur = 0;
         ctx.globalAlpha = 1;
         
-        // --- EFECTO DE SHAKE DE LA CASA (AUTO PASANDO) ---
         let shakeX = 0;
         let shakeY = 0;
         if (eventCar.active) {
             let t = eventCar.timer / 1000;
-            // 4 shakes bruscos en intervalos de 0.5s a partir del segundo 8.2
             if ((t >= 8.2 && t < 8.35) || (t >= 8.7 && t < 8.85) || (t >= 9.2 && t < 9.35) || (t >= 9.7 && t < 9.85)) {
                 shakeX = (Math.random() - 0.5) * 12; 
                 shakeY = (Math.random() - 0.5) * 12;
@@ -1317,7 +1329,6 @@
         
         drawPlayer();
         
-        // Finalizamos la capa de movimiento antes del viñetado/flash
         ctx.restore();
         
         if (lightningFlash > 0) {
@@ -1365,7 +1376,6 @@
     function drawRoom() {
         ctx.fillStyle = '#0a0b10'; ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Ventana (Izq)
         ctx.fillStyle = '#111522'; ctx.fillRect(30, 50, 120, 250);
         
         ctx.save();
@@ -1375,7 +1385,6 @@
 
         if (eventCar.active) {
             let t = eventCar.timer / 1000;
-            // Pasa en 6 segundos (de t=4.0 a t=10.0) para que se vea aún más lento
             if (t >= 4.0 && t <= 10.0) {
                 let prog = (t - 4.0) / 6.0; 
                 let startX = 160;
@@ -1383,7 +1392,7 @@
                 let x = startX + (endX - startX) * prog;
                 let y = 220;
 
-                ctx.fillStyle = '#e6e6cc'; // Blanco gris amarillo (mayor contraste)
+                ctx.fillStyle = '#e6e6cc'; 
                 ctx.fillRect(x, y, 60, 25); 
                 ctx.fillRect(x + 10, y - 15, 35, 15); 
                 
@@ -1403,7 +1412,6 @@
             else if (t <= 3.5) alpha = 1.0; 
             else if (t <= 5.0) alpha = 1.0 - ((t - 3.5) / 1.5); 
 
-            // Reducimos la opacidad máxima a 0.35 para que se vea como un reflejo fantasma
             ctx.globalAlpha = Math.max(0, Math.min(1, alpha)) * 0.35;
             if (imgChicken.complete && imgChicken.naturalWidth > 0) {
                 ctx.drawImage(imgChicken, 40, 125, 100, 100);
@@ -1478,7 +1486,6 @@
             let baseSize = boss.phase === 1 ? 250 : 380;
             let growth = boss.phase === 1 ? 100 : 200;
             
-            // Achicamos 20% al Jefe 2 Fase 2
             if (level === 2 && boss.phase === 2) {
                 baseSize = 304; 
                 growth = 160;
@@ -1706,6 +1713,63 @@
         if (gameState !== 'PLAYING') return;
         updateTouches(e.touches);
     });
+
+    // --- FUNCIONES DEL MENÚ Y RANKING ---
+
+    function goToTutorial() {
+        const name = playerNameInput.value.trim();
+        if (name === "") {
+            alert("¡Tenés que ingresar un nombre para jugar!");
+            return;
+        }
+        playerName = name;
+        loginScreen.classList.add('hidden');
+        startScreen.classList.remove('hidden'); 
+    }
+
+    function showRanking() {
+        loginScreen.classList.add('hidden');
+        rankingScreen.classList.remove('hidden');
+        rankingList.innerHTML = '<p class="text-center text-gray-400 animate-pulse">Cargando ranking...</p>';
+
+        fetch(URL_GOOGLE_SCRIPT)
+        .then(res => res.json())
+        .then(datos => {
+            rankingList.innerHTML = '';
+            if (datos.length === 0) {
+                rankingList.innerHTML = '<p class="text-center text-gray-400">Aún no hay puntajes.</p>';
+                return;
+            }
+            // Dibujamos el Top 10
+            datos.forEach((jugador, index) => {
+                let colorNombre = index === 0 ? 'text-yellow-400 text-xl' : 'text-white';
+                rankingList.innerHTML += `
+                    <div class="flex justify-between items-center border-b border-gray-700 pb-2">
+                        <span class="font-bold ${colorNombre}">${index + 1}. ${jugador.nombre}</span>
+                        <span class="text-green-400 font-mono text-lg">${formatTime(jugador.puntaje)}</span>
+                    </div>
+                `;
+            });
+        })
+        .catch(err => {
+            console.error("Error:", err);
+            rankingList.innerHTML = '<p class="text-center text-red-400">Error al cargar el ranking.</p>';
+        });
+    }
+
+    function hideRanking() {
+        rankingScreen.classList.add('hidden');
+        loginScreen.classList.remove('hidden');
+    }
+
+    function enviarPuntaje() {
+        if (timeSurvived > 0) {
+            fetch(URL_GOOGLE_SCRIPT, {
+                method: 'POST',
+                body: JSON.stringify({ nombre: playerName, puntaje: timeSurvived }) 
+            }).catch(err => console.error("Error al guardar:", err));
+        }
+    }
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
