@@ -1,0 +1,1716 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sobrevive a la Noche de Reels</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #050505;
+            overflow: hidden;
+            font-family: 'Courier New', Courier, monospace;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            background-color: #0a0a12;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            aspect-ratio: 3/4; 
+        }
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+        }
+        .screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.9);
+            pointer-events: auto;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            transition: opacity 0.3s ease;
+            z-index: 50;
+        }
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .btn {
+            margin-top: 20px;
+            padding: 12px 24px;
+            background-color: #4ade80;
+            color: #050505;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            font-size: 1.2rem;
+        }
+        .btn:hover {
+            background-color: #22c55e;
+            transform: scale(1.05);
+        }
+        .btn-purple {
+            background-color: #a855f7;
+            color: white;
+            margin-top: 10px;
+            font-size: 1rem;
+            padding: 10px 20px;
+        }
+        .btn-purple:hover {
+            background-color: #9333ea;
+        }
+        #hud {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            width: 100%;
+        }
+        .hud-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+        .hud-text {
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .battery-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            width: 100px;
+        }
+        .battery-container {
+            width: 100%;
+            height: 16px;
+            border: 2px solid #fff;
+            border-radius: 4px;
+            padding: 2px;
+            position: relative;
+            background: rgba(0,0,0,0.5);
+        }
+        .battery-fill {
+            height: 100%;
+            background-color: #4ade80;
+            width: 100%;
+            transition: width 0.1s linear, background-color 0.3s;
+        }
+        .battery-container::after {
+            content: '';
+            position: absolute;
+            right: -6px;
+            top: 2px;
+            width: 4px;
+            height: 8px;
+            background: #fff;
+            border-radius: 0 2px 2px 0;
+        }
+        #levelIndicator {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            margin-top: 6px;
+        }
+        .level-star {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 4px rgba(0,0,0,0.8));
+        }
+        @keyframes blinkFast {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .star-blink {
+            animation: blinkFast 0.15s 8;
+        }
+        #bossWarningText {
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: clamp(1.8rem, 6vw, 2.5rem);
+            color: #fbbf24;
+            font-weight: bold;
+            letter-spacing: 4px;
+            text-shadow: 0 0 15px #b45309;
+            text-align: center;
+            width: 100%;
+            line-height: 1.2;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        #warningText {
+            position: absolute;
+            bottom: 8%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: clamp(1.2rem, 4vw, 2.5rem);
+            color: #ef4444;
+            font-weight: 900;
+            text-shadow: 0 0 20px #7f1d1d, 0 0 10px #000;
+            text-align: center;
+            width: 100%;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.1s;
+        }
+        .controls-hint {
+            color: #fbcfe8;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="600" height="800"></canvas>
+    
+    <div class="ui-layer" id="mainUI" style="opacity: 0;">
+        <div id="hud">
+            <div class="battery-wrapper" id="leftBatteryWrapper">
+                <div class="text-xs text-gray-300">BATERÍA IZQ.</div>
+                <div class="battery-container"><div id="battery-fill-left" class="battery-fill"></div></div>
+                <div id="levelIndicator"></div>
+            </div>
+            
+            <div class="hud-center">
+                <div class="hud-text" id="timerDisplay">00:00:00</div>
+                <div class="hud-text text-purple-400 text-sm mt-1 hidden" id="survivalTimerDisplay">Supervivencia: 00:00:00</div>
+            </div>
+
+            <div class="battery-wrapper hidden" id="rightBatteryWrapper">
+                <div class="text-xs text-gray-300">BATERÍA DER.</div>
+                <div class="battery-container"><div id="battery-fill-right" class="battery-fill"></div></div>
+            </div>
+        </div>
+        
+        <div id="bossWarningText">EL JEFE<br>SE ACERCA</div>
+        <div id="warningText">¡ALGO GORDO SE ACERCA!</div>
+    </div>
+
+    <div id="startScreen" class="screen">
+        <h1 class="text-5xl font-bold mb-4 text-green-400">Reel Defender</h1>
+        <p class="text-lg max-w-2xl mb-4">Estás viendo reels en la cama a las 3 AM. No estás solo.</p>
+        <div class="controls-hint text-xl font-bold">
+            MANTÉN PULSADA LA PANTALLA para mostrarle un reel y ahuyentarlo.
+        </div>
+        <p class="text-md text-gray-300 max-w-xl mb-6">
+            Gestiona la batería de tu teléfono. Si llega a 0, se apagará.
+        </p>
+        <button class="btn" onclick="startGame()">Comenzar Nivel 1</button>
+        <button class="btn btn-purple" onclick="testLevel3()">Modo Supervivencia</button>
+    </div>
+
+    <div id="level2Screen" class="screen hidden">
+        <h1 class="text-4xl font-bold mb-4 text-yellow-400">¡NUEVO NIVEL!</h1>
+        <p class="text-lg mb-4">La noche se complica. Ahora atacan en parejas.</p>
+        <div class="controls-hint">
+            <p class="text-lg font-bold mb-2">TIENES DOS TELÉFONOS AHORA</p>
+            <p>Toca la <strong>MITAD IZQUIERDA</strong> de la pantalla para alumbrar a la izquierda.</p>
+            <p>Toca la <strong>MITAD DERECHA</strong> de la pantalla para alumbrar a la derecha.</p>
+        </div>
+        <button class="btn" onclick="startLevel2()">Continuar Sobreviviendo</button>
+    </div>
+
+    <div id="level3Screen" class="screen hidden">
+        <h1 class="text-4xl font-bold mb-4 text-purple-400">¡MODO SUPERVIVENCIA!</h1>
+        <p class="text-lg mb-4">Has ahuyentado a la peor pesadilla, pero la noche no acaba.</p>
+        <div class="controls-hint">
+            <p class="text-lg font-bold mb-2">NIVEL 3: RÁFAGAS</p>
+            <p>Ellos huyen más rápido y tú recargas más rápido.</p>
+            <p>Pero aparecerán sin cesar cada 0.5 segundos.</p>
+        </div>
+        <button class="btn" onclick="startLevel3()">Luchar hasta el final</button>
+    </div>
+
+    <div id="gameOverScreen" class="screen hidden">
+        <h1 id="gameOverTitle" class="text-6xl font-bold mb-2 text-red-600 uppercase">TE ATRAPÓ</h1>
+        <p id="gameOverSubtitle" class="text-xl mb-6">Dejaste de scrollear.</p>
+        <div id="gameOverBox" class="bg-gray-800 p-6 rounded-lg mb-6 shadow-lg shadow-red-900/50 flex flex-col items-center">
+            <p id="gameOverScoreLabel" class="text-gray-400 text-sm text-center">TIEMPO SOBREVIVIDO</p>
+            <p class="text-4xl font-mono text-white" id="finalScore">00:00:00</p>
+        </div>
+        <button class="btn" onclick="resetGame()">Intentar de Nuevo</button>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+// --- IMÁGENES ---
+    const imgLevelStarSrc = "https://i.postimg.cc/cHjz4Zqd/20260125-152321(1)(1).png"; 
+
+    const imgPlayer = new Image();
+    imgPlayer.src = "https://i.postimg.cc/XqKdNbm2/IMG-20260225-WA0043(1).png"; 
+    
+    const imgPlayerLit = new Image();
+    imgPlayerLit.src = "https://i.postimg.cc/hv8T4B68/1772063833308.png";
+
+    const imgBoss1 = new Image();
+    imgBoss1.src = "https://i.postimg.cc/wM5LxpZh/Screenshot-20260225-210932-Gallery.png";
+
+    const imgBoss2Ph1 = new Image();
+    imgBoss2Ph1.src = "https://i.postimg.cc/j5jrGWZD/Screenshot-20260226-122551-Gallery.png";
+    
+    const imgBoss2Ph2 = new Image();
+    imgBoss2Ph2.src = "https://i.postimg.cc/tgQ8F97q/Screenshot-20260226-123607-Gallery.png";
+
+    const imgMonster1 = new Image();
+    imgMonster1.src = "https://i.postimg.cc/prQzVH4k/20260214-005650(1).png";
+    const imgMonster2 = new Image();
+    imgMonster2.src = "https://i.postimg.cc/x8GMj2h6/IMG-20260127-WA0238.png";
+    const imgMonster3 = new Image();
+    imgMonster3.src = "https://i.postimg.cc/WzmgpvCX/IMG-20260127-WA0318.png";
+    const imgMonster4 = new Image();
+    imgMonster4.src = "https://i.postimg.cc/L5kL4pwV/IMG-20260214-WA0005(1).png";
+    const imgMonster5 = new Image();
+    imgMonster5.src = "https://i.postimg.cc/L5kL4pwf/IMG-20260225-WA0088.png";
+    const imgMonster6 = new Image();
+    imgMonster6.src = "https://i.postimg.cc/mk3CZsJ6/Screenshot-20260225-174400-Photos.png";
+    const imgMonster7 = new Image();
+    imgMonster7.src = "https://i.postimg.cc/kGNKMmz1/Screenshot-20260225-174612-Gallery.png";
+    const imgMonster8 = new Image();
+    imgMonster8.src = "https://i.postimg.cc/90PZXhKp/Screenshot-20260225-193552-Intent-Resolver.png";
+    const imgMonster9 = new Image();
+    imgMonster9.src = "https://i.postimg.cc/3NjmrTVC/Screenshot-20260225-202605-Whats-App(1).png";
+    const imgMonster10 = new Image();
+    imgMonster10.src = "https://i.postimg.cc/SRLCQh3C/Screenshot-20260225-210912-Gallery(1).png";
+    const imgMonster11 = new Image();
+    imgMonster11.src = "https://i.postimg.cc/C5CkMgXG/Screenshot-20260225-211200-Gallery.png";
+    const imgMonster12 = new Image();
+    imgMonster12.src = "https://i.postimg.cc/D0QLfTH1/Screenshot-20260225-211848-Photos.png";
+    const imgMonster13 = new Image();
+    imgMonster13.src = "https://i.postimg.cc/NF8mGcSH/Screenshot-20260225-215552-One-UI-Home.png";
+
+    const imgVictory = new Image();
+    imgVictory.src = "https://i.postimg.cc/MTm1GmfV/20260125-152321.png";
+
+    // --- IMÁGENES Y AUDIOS DE EVENTOS DE VENTANA ---
+    const imgChicken = new Image();
+    imgChicken.src = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTyQ3bP1PZlL3pL6xXOkLoRDqWHryvokaboDg&s";
+    
+    const audioCar = new Audio('https://www.myinstants.com/media/sounds/oye-gela-escuchate-esto-saturado.mp3');
+    const audioChicken = new Audio('https://www.myinstants.com/media/sounds/chicken-on-tree-screaming.mp3');
+
+    const monsterImagesArray = [
+        imgMonster1, imgMonster2, imgMonster3, imgMonster4, imgMonster5, 
+        imgMonster6, imgMonster7, imgMonster8, imgMonster9, imgMonster10, 
+        imgMonster11, imgMonster12, imgMonster13
+    ];
+
+    // ---------------------------------
+    
+    // UI Elements
+    const startScreen = document.getElementById('startScreen');
+    const level2Screen = document.getElementById('level2Screen');
+    const level3Screen = document.getElementById('level3Screen');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const mainUI = document.getElementById('mainUI');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const survivalTimerDisplay = document.getElementById('survivalTimerDisplay');
+    const levelIndicator = document.getElementById('levelIndicator');
+    const bossWarningText = document.getElementById('bossWarningText');
+    const warningText = document.getElementById('warningText');
+    const finalScoreDisplay = document.getElementById('finalScore');
+    
+    const batteryFillLeft = document.getElementById('battery-fill-left');
+    const batteryFillRight = document.getElementById('battery-fill-right');
+    const rightBatteryWrapper = document.getElementById('rightBatteryWrapper');
+    const leftBatteryWrapper = document.getElementById('leftBatteryWrapper');
+    
+    const gameOverTitle = document.getElementById('gameOverTitle');
+    const gameOverSubtitle = document.getElementById('gameOverSubtitle');
+    const gameOverScoreLabel = document.getElementById('gameOverScoreLabel');
+    const gameOverBox = document.getElementById('gameOverBox');
+
+    // Audio Externo
+    const windSound = new Audio('https://actions.google.com/sounds/v1/horror/hallow_wind.ogg');
+    windSound.loop = true;      
+    windSound.volume = 0.9;    
+
+    // --- NUEVO SISTEMA DE REELS ---
+    const MASTER_REEL_VOLUME = 1.0; 
+
+    const reelSoundsPaths = [
+        "https://www.myinstants.com/media/sounds/lingan-guli-wacha.mp3",
+        "https://www.myinstants.com/media/sounds/salesman-squid-game-edit-audio-blah-phonk.mp3",
+        "https://www.myinstants.com/media/sounds/all-goofy-sounds.mp3",
+        "https://www.myinstants.com/media/sounds/six-seven-w.mp3",
+        "https://www.myinstants.com/media/sounds/josh-hutcherson-meme.mp3"
+    ];
+
+    let reelAudios = [];
+    let isReelPlaying = false;
+    
+    const REEL_BASE_VOL = 0.04 * MASTER_REEL_VOLUME; 
+    const REEL_ACTIVE_VOL = 0.195 * MASTER_REEL_VOLUME; 
+
+    let playlistIndices = [0, 1, 2, 3, 4];
+    let currentPlaylistPos = 0;
+
+    function shufflePlaylist() {
+        for (let i = playlistIndices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [playlistIndices[i], playlistIndices[j]] = [playlistIndices[j], playlistIndices[i]];
+        }
+    }
+
+    reelSoundsPaths.forEach((path) => {
+        let a = new Audio(path);
+        a.volume = REEL_BASE_VOL;
+        a.addEventListener('ended', () => {
+            a.currentTime = 0;
+            a.pause();
+            currentPlaylistPos = (currentPlaylistPos + 1) % playlistIndices.length;
+            let nextAudio = reelAudios[playlistIndices[currentPlaylistPos]];
+            nextAudio.volume = isReelPlaying ? REEL_ACTIVE_VOL : REEL_BASE_VOL;
+            nextAudio.play().catch(e => console.log(e));
+        });
+        reelAudios.push(a);
+    });
+    // -----------------------------------------
+
+    // Web Audio API
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx;
+
+    const synth = {
+        bgmOsc: null, bgmGain: null, awakeOsc: null,
+        preload: function() {
+            if (!audioCtx) audioCtx = new AudioContext();
+        },
+        init: function() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (!this.awakeOsc) {
+                this.awakeOsc = audioCtx.createOscillator();
+                const awakeGain = audioCtx.createGain(); awakeGain.gain.value = 0.0001; 
+                this.awakeOsc.connect(awakeGain); awakeGain.connect(audioCtx.destination); this.awakeOsc.start();
+            }
+        },
+        playTone: function(freq, type, duration, vol = 0.1) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + duration);
+        },
+        playBGM: function() {
+            if (!audioCtx) return;
+            if (this.bgmOsc) this.stopBGM();
+            this.bgmOsc = audioCtx.createOscillator(); this.bgmGain = audioCtx.createGain();
+            this.bgmOsc.type = 'triangle'; 
+            this.bgmOsc.frequency.value = 50; 
+            this.lfo = audioCtx.createOscillator(); const lfoGain = audioCtx.createGain();
+            this.lfo.type = 'sine'; this.lfo.frequency.value = 0.15; 
+            lfoGain.gain.value = 0.55; 
+            
+            this.bgmGain.gain.value = 0.75; 
+            
+            this.lfo.connect(lfoGain); lfoGain.connect(this.bgmGain.gain);
+            this.bgmOsc.connect(this.bgmGain); this.bgmGain.connect(audioCtx.destination);
+            this.bgmOsc.start(); this.lfo.start();
+        },
+        stopBGM: function() {
+            if (this.bgmOsc) { this.bgmOsc.stop(); this.bgmOsc.disconnect(); this.bgmOsc = null; }
+            if (this.lfo) { this.lfo.stop(); this.lfo.disconnect(); this.lfo = null; }
+        },
+        startReelSystem: function() {
+            this.stopReelSystem(); 
+            shufflePlaylist();     
+            currentPlaylistPos = 0;
+            let currentAudio = reelAudios[playlistIndices[currentPlaylistPos]];
+            currentAudio.volume = REEL_BASE_VOL;
+            currentAudio.play().catch(e => console.log(e));
+        },
+        stopReelSystem: function() {
+            isReelPlaying = false;
+            reelAudios.forEach(a => a.pause());
+        },
+        setReelActive: function(isActive) {
+            isReelPlaying = isActive;
+            let currentAudio = reelAudios[playlistIndices[currentPlaylistPos]];
+            currentAudio.volume = isActive ? REEL_ACTIVE_VOL : REEL_BASE_VOL;
+        },
+        playVictory: function() {
+            if (!audioCtx) return;
+            this.playTone(440, 'triangle', 0.15, 0.4); 
+            setTimeout(() => this.playTone(554, 'triangle', 0.15, 0.4), 150); 
+            setTimeout(() => this.playTone(659, 'triangle', 0.15, 0.4), 300); 
+            setTimeout(() => this.playTone(880, 'triangle', 0.5, 0.5), 450); 
+        },
+        playWarning: function(speedMult) {
+            if (!audioCtx) return;
+            const osc1 = audioCtx.createOscillator(); const osc2 = audioCtx.createOscillator();
+            const gain = audioCtx.createGain(); const baseFreq = 200 + (speedMult * 400); 
+            osc1.type = 'sawtooth'; osc2.type = 'triangle'; const detune = 20 + Math.random() * 60;
+            osc1.frequency.setValueAtTime(baseFreq, audioCtx.currentTime); osc2.frequency.setValueAtTime(baseFreq + detune, audioCtx.currentTime);
+            osc1.frequency.exponentialRampToValueAtTime(baseFreq * 0.7, audioCtx.currentTime + 0.4);
+            osc2.frequency.exponentialRampToValueAtTime((baseFreq + detune) * 0.7, audioCtx.currentTime + 0.4);
+            gain.gain.setValueAtTime(0, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.05); 
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4); 
+            osc1.connect(gain); osc2.connect(gain); gain.connect(audioCtx.destination);
+            osc1.start(); osc2.start(); osc1.stop(audioCtx.currentTime + 0.4); osc2.stop(audioCtx.currentTime + 0.4);
+        },
+        playAttack: function(speedMult) {
+            const freq = 600 + (speedMult * 500) + (Math.random() * 300);
+            this.playTone(freq, 'sawtooth', 0.08, 0.2);
+        },
+        playJumpscare: function() {
+            this.playTone(150, 'square', 1.5, 0.8);
+            this.playTone(200, 'sawtooth', 1.5, 0.8);
+            this.playTone(80, 'sawtooth', 1.5, 0.9);
+        }
+    };
+
+    synth.preload();
+
+    // Estado del juego
+    let gameState = 'MENU'; 
+    let lastTime = 0; // Modificado para evitar desfasajes temporales en reinicios
+    let timeSurvived = 0; 
+    let level2StartTime = 0; 
+    let level3StartTime = 0;
+    let difficulty = 1;
+    let level = 1;
+
+    let batteryLeft = 100;
+    let batteryRight = 100;
+    let phoneLeftActive = false;
+    let phoneRightActive = false;
+    let phoneCenterActive = false;
+    
+    let lastSpawnSide = 'none';
+    let consecutiveSideCount = 0;
+    
+    let lightningFlash = 0;
+    let startedFromSurvival = false;
+
+    // --- EVENTOS DE FONDO ---
+    let eventCar = { triggered: false, active: false, timer: 0 };
+    let eventChicken = { triggered: false, active: false, timer: 0 };
+
+    let boss = {
+        state: 'NONE', 
+        timer: 10000,
+        progress: 0,
+        wobble: 0,
+        hp: 50,
+        maxHp: 50,
+        phase: 1,
+        spawnIdx: 3,
+        cooldown: 0
+    };
+
+    let victoryAnim = { active: false, progress: 0 }; 
+
+    const player = { x: 300, y: 700, radius: 25 };
+
+    const spawnPoints = [
+        { x: 90,  y: 150, name: 'Ventana', side: 'left' },
+        { x: 300, y: 50,  name: 'Techo', side: 'center' },
+        { x: 60,  y: 590, name: 'Televisor', side: 'left' },
+        { x: 500, y: 250, name: 'Puerta', side: 'right' },
+        { x: 480, y: 500, name: 'Armario', side: 'right' },
+        { x: 490, y: 750, name: 'Bajo la cama', side: 'right' }
+    ];
+
+    let monsters = [];
+    let globalSpawnTimer = 2000;
+    let maxMonsters = 1;
+
+    function formatTime(ms) {
+        let totalSeconds = Math.floor(Math.max(0, ms) / 1000); // Math.max evita negativos
+        let minutes = Math.floor(totalSeconds / 60);
+        let seconds = totalSeconds % 60;
+        let milis = Math.floor((Math.max(0, ms) % 1000) / 10);
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${milis.toString().padStart(2, '0')}`;
+    }
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
+    function renderLevelStars(lvl, blink = false) {
+        levelIndicator.innerHTML = '';
+        for (let i = 0; i < lvl; i++) {
+            let img = document.createElement('img');
+            img.src = imgLevelStarSrc;
+            img.className = "level-star" + (blink ? " star-blink" : "");
+            levelIndicator.appendChild(img);
+        }
+    }
+
+    function resetGame() {
+        startScreen.classList.remove('hidden');
+        gameOverScreen.classList.add('hidden');
+        mainUI.style.opacity = '0';
+        gameState = 'MENU';
+        
+        timerDisplay.classList.remove('hidden');
+        survivalTimerDisplay.classList.add('hidden');
+        levelIndicator.classList.remove('hidden');
+
+        audioCar.pause(); audioCar.currentTime = 0;
+        audioChicken.pause(); audioChicken.currentTime = 0;
+        eventCar.active = false;
+        eventChicken.active = false;
+    }
+
+    function startGame() {
+        startScreen.classList.add('hidden');
+        mainUI.style.opacity = '1';
+        rightBatteryWrapper.classList.add('hidden');
+        leftBatteryWrapper.querySelector('.text-xs').textContent = "BATERÍA TELÉFONO";
+        
+        timerDisplay.classList.remove('hidden');
+        survivalTimerDisplay.classList.add('hidden'); 
+        levelIndicator.classList.remove('hidden');
+        
+        gameState = 'PLAYING';
+        timeSurvived = 0;
+        level2StartTime = 0;
+        level3StartTime = 0;
+        difficulty = 1;
+        level = 1;
+        maxMonsters = 1;
+        
+        lastSpawnSide = 'none';
+        consecutiveSideCount = 0;
+        lightningFlash = 0;
+        startedFromSurvival = false;
+        
+        renderLevelStars(level);
+
+        audioCar.pause(); audioCar.currentTime = 0;
+        audioChicken.pause(); audioChicken.currentTime = 0;
+        eventCar = { triggered: false, active: false, timer: 0 };
+        eventChicken = { triggered: false, active: false, timer: 0 };
+
+        boss = { state: 'NONE', timer: 10000, progress: 0, wobble: 0, hp: 50, maxHp: 50, phase: 1, spawnIdx: 3, cooldown: 0 };
+        victoryAnim = { active: false, progress: 0 };
+        
+        batteryLeft = 100; batteryRight = 100;
+        phoneLeftActive = false; phoneRightActive = false; phoneCenterActive = false;
+        
+        monsters = [];
+        globalSpawnTimer = 2000;
+        warningText.style.opacity = '0';
+        
+        lastTime = 0; // Forzamos inicialización sincronizada en gameLoop
+        requestAnimationFrame(gameLoop);
+        
+        synth.init();
+        synth.playBGM(); 
+        windSound.currentTime = 0; 
+        windSound.play().catch(e => {});
+        synth.startReelSystem(); 
+    }
+
+    function testLevel3() {
+        startScreen.classList.add('hidden');
+        mainUI.style.opacity = '1';
+        rightBatteryWrapper.classList.remove('hidden');
+        leftBatteryWrapper.querySelector('.text-xs').textContent = "BATERÍA IZQ.";
+        
+        // Al probar directo, ocultamos estrellas y reloj principal, mostramos solo supervivencia
+        timerDisplay.classList.add('hidden');
+        survivalTimerDisplay.classList.remove('hidden'); 
+        levelIndicator.classList.add('hidden');
+
+        gameState = 'PLAYING';
+        timeSurvived = 240000; 
+        level3StartTime = 240000; 
+        
+        difficulty = 2.0; 
+        level = 3;
+        maxMonsters = 3; 
+
+        lastSpawnSide = 'none';
+        consecutiveSideCount = 0;
+        lightningFlash = 0;
+        startedFromSurvival = true;
+        
+        eventCar.triggered = true; 
+        eventChicken.triggered = true;
+
+        boss = { state: 'DEFEATED', timer: 10000, progress: 0, wobble: 0, hp: 50, maxHp: 50, phase: 1, spawnIdx: 3, cooldown: 0 };
+        victoryAnim = { active: false, progress: 0 };
+
+        batteryLeft = 100; batteryRight = 100;
+        phoneLeftActive = false; phoneRightActive = false; phoneCenterActive = false;
+
+        monsters = [];
+        globalSpawnTimer = 500; 
+        warningText.style.opacity = '0';
+
+        lastTime = 0; 
+        requestAnimationFrame(gameLoop);
+
+        synth.init();
+        synth.playBGM();
+        windSound.currentTime = 0;
+        windSound.play().catch(e => {});
+        synth.startReelSystem(); 
+    }
+
+    function startVictoryAnimation() {
+        synth.stopBGM();
+        synth.playVictory();
+        victoryAnim.active = true;
+        victoryAnim.progress = 0;
+        monsters = []; 
+        
+        renderLevelStars(level + 1, true);
+    }
+
+    function triggerLevel2() {
+        gameState = 'LEVEL_TRANSITION';
+        level = 2;
+        maxMonsters = 2;
+        batteryLeft = 100;
+        batteryRight = 100;
+        phoneLeftActive = false; phoneRightActive = false; phoneCenterActive = false;
+        
+        boss.state = 'DEFEATED';
+        
+        synth.stopBGM(); 
+        synth.stopReelSystem(); 
+        mainUI.style.opacity = '0';
+        level2Screen.classList.remove('hidden');
+        
+        monsters = [];
+    }
+
+    function startLevel2() {
+        level2Screen.classList.add('hidden');
+        mainUI.style.opacity = '1';
+        
+        rightBatteryWrapper.classList.remove('hidden');
+        leftBatteryWrapper.querySelector('.text-xs').textContent = "BATERÍA IZQ.";
+        
+        level2StartTime = timeSurvived; 
+        globalSpawnTimer = 3000; // 3 segundos sin monstruos al comienzo
+        maxMonsters = 2; 
+        
+        lastSpawnSide = 'none';
+        consecutiveSideCount = 0;
+        
+        renderLevelStars(level); 
+
+        boss = { state: 'NONE', timer: 10000, progress: 0, wobble: 0, hp: 50, maxHp: 50, phase: 1, spawnIdx: 3, cooldown: 0 };
+        
+        gameState = 'PLAYING';
+        lastTime = 0;
+        synth.playBGM(); 
+        synth.startReelSystem(); 
+        requestAnimationFrame(gameLoop);
+    }
+
+    function triggerLevel3() {
+        gameState = 'LEVEL_TRANSITION';
+        level = 3;
+        maxMonsters = 3;
+        batteryLeft = 100;
+        batteryRight = 100;
+        phoneLeftActive = false; phoneRightActive = false; phoneCenterActive = false;
+        
+        boss.state = 'DEFEATED';
+        
+        synth.stopBGM(); 
+        synth.stopReelSystem(); 
+        mainUI.style.opacity = '0';
+        level3Screen.classList.remove('hidden');
+        
+        monsters = [];
+    }
+
+    function startLevel3() {
+        level3Screen.classList.add('hidden');
+        mainUI.style.opacity = '1';
+        
+        rightBatteryWrapper.classList.remove('hidden');
+        leftBatteryWrapper.querySelector('.text-xs').textContent = "BATERÍA IZQ.";
+        
+        if (!startedFromSurvival) {
+            timerDisplay.classList.remove('hidden');
+            survivalTimerDisplay.classList.add('hidden');
+        }
+        
+        level3StartTime = timeSurvived; 
+        globalSpawnTimer = 500; 
+        maxMonsters = 3; 
+        difficulty = 2.0;
+        
+        lastSpawnSide = 'none';
+        consecutiveSideCount = 0;
+        
+        renderLevelStars(level);
+
+        boss = { state: 'DEFEATED', timer: 10000, progress: 0, wobble: 0, hp: 50, maxHp: 50, phase: 1, spawnIdx: 3, cooldown: 0 };
+        
+        gameState = 'PLAYING';
+        lastTime = 0;
+        synth.playBGM(); 
+        synth.startReelSystem(); 
+        requestAnimationFrame(gameLoop);
+    }
+
+    function gameOver() {
+        gameState = 'GAMEOVER';
+        synth.stopBGM();
+        windSound.pause();
+        synth.stopReelSystem(); 
+        synth.playJumpscare();
+        mainUI.style.opacity = '0';
+        gameOverScreen.classList.remove('hidden');
+        
+        // Estilos dinámicos para la pantalla de Game Over dependiendo del nivel y modo
+        if (level === 3) {
+            gameOverTitle.textContent = "SUPERVIVENCIA TERMINADA";
+            gameOverTitle.className = "text-5xl font-bold mb-2 text-purple-500 uppercase text-center";
+            gameOverSubtitle.textContent = "Has sucumbido ante la ráfaga infinita.";
+            gameOverBox.className = "bg-gray-800 p-6 rounded-lg mb-6 shadow-lg shadow-purple-900/50 flex flex-col items-center text-center";
+
+            if (startedFromSurvival) {
+                gameOverScoreLabel.textContent = "TIEMPO EN SUPERVIVENCIA";
+                finalScoreDisplay.textContent = formatTime(timeSurvived - level3StartTime);
+            } else {
+                gameOverScoreLabel.textContent = "TIEMPO TOTAL (N1 + N2 + SUPERVIVENCIA)";
+                finalScoreDisplay.textContent = formatTime(timeSurvived);
+            }
+        } else {
+            gameOverTitle.textContent = "TE ATRAPÓ";
+            gameOverTitle.className = "text-6xl font-bold mb-2 text-red-600 uppercase text-center";
+            gameOverSubtitle.textContent = "Dejaste de scrollear.";
+            gameOverBox.className = "bg-gray-800 p-6 rounded-lg mb-6 shadow-lg shadow-red-900/50 flex flex-col items-center text-center";
+            gameOverScoreLabel.textContent = "TIEMPO SOBREVIVIDO";
+            finalScoreDisplay.textContent = formatTime(timeSurvived);
+        }
+        
+        drawRoom();
+        drawJumpscare();
+    }
+
+    function spawnMonster() {
+        let behavior = Math.random();
+
+        let allowedSpawns = [0, 1, 3]; 
+        // Aparecen antes en el nivel 1 ya que ahora es mas corto
+        if (level >= 2 || timeSurvived >= 15000) allowedSpawns.push(2); 
+        if (level >= 2 || timeSurvived >= 25000) allowedSpawns.push(4, 5); 
+
+        // En la fase 2 del boss 2, prohibimos abajo der/izq y techo. Solo quedan Ventana (0) y Puerta (3)
+        if (level === 2 && boss.state === 'WALKING' && boss.phase === 2) {
+            allowedSpawns = [0, 3];
+        }
+
+        if (level === 3 && behavior >= 0.80) {
+            allowedSpawns = [0, 1, 3];
+        }
+
+        let idx = allowedSpawns[Math.floor(Math.random() * allowedSpawns.length)];
+        
+        while (monsters.some(m => m.spawnIdx === idx) && monsters.length < allowedSpawns.length) {
+            idx = allowedSpawns[Math.floor(Math.random() * allowedSpawns.length)];
+        }
+        
+        let chosenSide = spawnPoints[idx].side;
+        
+        if (chosenSide !== 'center') {
+            if (chosenSide === lastSpawnSide) {
+                consecutiveSideCount++;
+                if (consecutiveSideCount > 4) { 
+                    let alternateSpawns = allowedSpawns.filter(i => spawnPoints[i].side !== lastSpawnSide);
+                    if (alternateSpawns.length > 0) {
+                        idx = alternateSpawns[Math.floor(Math.random() * alternateSpawns.length)];
+                        while (monsters.some(m => m.spawnIdx === idx) && monsters.length < alternateSpawns.length) {
+                            idx = alternateSpawns[Math.floor(Math.random() * alternateSpawns.length)];
+                        }
+                        chosenSide = spawnPoints[idx].side;
+                        consecutiveSideCount = 1;
+                        lastSpawnSide = chosenSide;
+                    }
+                }
+            } else {
+                consecutiveSideCount = 1;
+                lastSpawnSide = chosenSide;
+            }
+        } else {
+            consecutiveSideCount = 1;
+            lastSpawnSide = 'center';
+        }
+
+        if (consecutiveSideCount === 4) {
+            behavior = 0.1; 
+        }
+
+        if (level === 2 && boss.state === 'WALKING' && boss.phase === 2) {
+            behavior = 0.1;
+        }
+
+        let warningMod = Math.max(0.3, 1 - (difficulty * 0.05));
+
+        let m = {
+            state: 'WARNING',
+            spawnIdx: idx,
+            progress: 0,
+            wobble: 0,
+            attackSpeedMult: 1,
+            side: spawnPoints[idx].side,
+            timer: 0,
+            imgIdx: Math.floor(Math.random() * 13) 
+        };
+
+        if (behavior < 0.15) {
+            m.timer = 0;
+            m.attackSpeedMult = 0.65;
+            m.state = 'ATTACKING';
+        } else if (behavior < 0.45) {
+            m.timer = 400 * warningMod;
+            m.attackSpeedMult = 0.8;
+        } else if (behavior < 0.80) {
+            m.timer = 1200 * warningMod;
+            m.attackSpeedMult = 1.2;
+        } else {
+            m.timer = 2000 * warningMod;
+            m.attackSpeedMult = 2.2;
+        }
+        
+        monsters.push(m);
+    }
+
+    function gameLoop(timestamp) {
+        if (gameState !== 'PLAYING') return;
+        
+        // Sincronización perfecta de fotogramas (evita dt negativos o saltos inmensos)
+        if (lastTime === 0) lastTime = timestamp;
+        
+        const dt = timestamp - lastTime;
+        lastTime = timestamp;
+        
+        update(dt);
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+
+    function update(dt) {
+        if (victoryAnim.active) {
+            victoryAnim.progress += dt / 3000; 
+            synth.setReelActive(false); 
+            
+            if (victoryAnim.progress >= (3500 / 3000)) { 
+                victoryAnim.active = false;
+                if (level === 1) {
+                    triggerLevel2();
+                } else if (level === 2) {
+                    triggerLevel3();
+                } else {
+                    resetGame(); 
+                }
+            }
+            return; 
+        }
+
+        timeSurvived += dt; 
+        timerDisplay.textContent = formatTime(timeSurvived);
+        
+        let lvl2Elapsed = timeSurvived - level2StartTime;
+
+        if (level === 1) {
+            if (timeSurvived >= 10000 && !eventCar.triggered) {
+                eventCar.triggered = true;
+                eventCar.active = true;
+                eventCar.timer = 0;
+                audioCar.volume = 0.8; 
+                audioCar.play().catch(e=>console.log(e));
+            }
+            // El pollo vuelve al Nivel 1, al segundo 30
+            if (timeSurvived >= 30000 && !eventChicken.triggered) {
+                eventChicken.triggered = true;
+                eventChicken.active = true;
+                eventChicken.timer = 0;
+                audioChicken.volume = 0.8; 
+                audioChicken.play().catch(e=>console.log(e));
+            }
+        }
+
+        if (eventCar.active) {
+            eventCar.timer += dt;
+            if (eventCar.timer > 15000) eventCar.active = false; 
+        }
+        if (eventChicken.active) {
+            eventChicken.timer += dt;
+            if (eventChicken.timer > 5000) eventChicken.active = false; 
+        }
+
+        let showPreBossWarning = false;
+        // Tiempos ajustados: Nivel 1 boss en 55s (aviso a los 40s). Nivel 2 boss en 85s (aviso a los 70s).
+        if (level === 1 && timeSurvived >= 40000 && timeSurvived <= 45000) showPreBossWarning = true; 
+        if (level === 2 && lvl2Elapsed >= 70000 && lvl2Elapsed <= 75000) showPreBossWarning = true; 
+
+        if (showPreBossWarning) {
+            bossWarningText.style.opacity = 0.25 + Math.sin(Date.now() / 150) * 0.15; 
+        } else {
+            bossWarningText.style.opacity = 0;
+        }
+
+        if (level === 3 && startedFromSurvival) {
+            survivalTimerDisplay.textContent = formatTime(timeSurvived - level3StartTime);
+        }
+
+        if (lightningFlash > 0) {
+            lightningFlash -= dt / 1000;
+            if (lightningFlash < 0) lightningFlash = 0;
+        }
+
+        if (boss.cooldown && boss.cooldown > 0) {
+            boss.cooldown -= dt;
+        }
+
+        let batteryRegenRate = 15; 
+        if (level === 2) {
+            // Ajustado al tiempo relativo del nivel 2 (~55 segs adentro)
+            if (lvl2Elapsed >= 55000) { 
+                maxMonsters = 3;
+                batteryRegenRate = 22; 
+            } else {
+                maxMonsters = 2;
+            }
+
+            if (boss.state === 'WALKING' && boss.phase === 2) {
+                maxMonsters = 1; 
+            }
+        } else if (level === 3) {
+            maxMonsters = 3;
+            batteryRegenRate = 25; 
+        }
+
+        if (level === 1) {
+            if (phoneCenterActive) {
+                batteryLeft -= (dt / 1000) * 20; 
+                if (batteryLeft <= 0) { batteryLeft = 0; phoneCenterActive = false; }
+            } else {
+                batteryLeft += (dt / 1000) * batteryRegenRate; 
+                if (batteryLeft > 100) batteryLeft = 100;
+            }
+            updateBatteryUI(batteryFillLeft, batteryLeft);
+        } else {
+            if (phoneLeftActive) {
+                batteryLeft -= (dt / 1000) * 20; 
+                if (batteryLeft <= 0) { batteryLeft = 0; phoneLeftActive = false; }
+            } else {
+                batteryLeft += (dt / 1000) * batteryRegenRate; 
+                if (batteryLeft > 100) batteryLeft = 100;
+            }
+            
+            if (phoneRightActive) {
+                batteryRight -= (dt / 1000) * 20; 
+                if (batteryRight <= 0) { batteryRight = 0; phoneRightActive = false; }
+            } else {
+                batteryRight += (dt / 1000) * batteryRegenRate; 
+                if (batteryRight > 100) batteryRight = 100;
+            }
+            
+            updateBatteryUI(batteryFillLeft, batteryLeft);
+            updateBatteryUI(batteryFillRight, batteryRight);
+        }
+
+        let lowestBattery = level === 1 ? batteryLeft : Math.min(batteryLeft, batteryRight);
+        if (synth.lfo && audioCtx) {
+            if (lowestBattery <= 30) {
+                synth.lfo.frequency.setTargetAtTime(4.0, audioCtx.currentTime, 0.5); 
+            } else {
+                synth.lfo.frequency.setTargetAtTime(0.15, audioCtx.currentTime, 0.5); 
+            }
+        }
+
+        if (level === 1) {
+            let seconds = timeSurvived / 1000;
+            // Escala de dificultad mas rapida para nivel 1 reducido
+            difficulty = 1 + (seconds * 0.025); 
+            if (seconds > 40) difficulty += (seconds - 40) * 0.025;   
+            difficulty = Math.min(difficulty, 6.0); 
+        } else if (level === 2) {
+            let duration = 85000; 
+            let progress = Math.min(1, Math.max(0, lvl2Elapsed / duration));
+            difficulty = lerp(1.1, 2.97, progress);
+        } else if (level === 3) {
+            let baseDifficulty = 2.0;
+            let survivalTime = timeSurvived - level3StartTime;
+            let intervals20s = Math.floor(survivalTime / 20000); 
+            difficulty = baseDifficulty * Math.pow(1.15, intervals20s); 
+        }
+
+        // Boss Nivel 1 (Aparece a los 55s)
+        if (level === 1 && timeSurvived >= 55000 && boss.state === 'NONE') {
+            boss.state = 'INTRO'; boss.timer = 10000; boss.phase = 1; boss.hp = 50; boss.maxHp = 50;
+        }
+
+        // Boss Nivel 2 (Aparece a los 85s relativos al nivel 2)
+        if (level === 2 && lvl2Elapsed >= 85000 && boss.state === 'NONE') {
+            boss.state = 'INTRO'; 
+            boss.timer = 5000; 
+            boss.phase = 1; 
+            boss.hp = 135; 
+            boss.maxHp = 135;
+            boss.spawnIdx = 3; 
+            synth.playJumpscare();
+        }
+
+        if (boss.state !== 'NONE' && boss.state !== 'DEFEATED') {
+            if (boss.state === 'INTRO') {
+                boss.timer -= dt;
+                if (boss.timer <= 0) {
+                    boss.state = 'WAITING';
+                }
+            } else if (boss.state === 'WAITING') {
+                if (monsters.length === 0 || level === 2) {
+                    if (level === 2 && boss.phase === 1) {
+                        monsters = [];
+                        lightningFlash = 2.0;
+                    }
+                    boss.state = 'WALKING';
+                    synth.playJumpscare(); 
+                }
+            } else if (boss.state === 'WALKING') {
+                let speed = 20000;
+                if (level === 1) speed = boss.phase === 1 ? 20000 : 35000;
+                else if (level === 2) speed = boss.phase === 1 ? 25000 : 45000; 
+
+                boss.progress += (dt / speed); 
+                boss.wobble += dt * 0.005;
+
+                let isDamaged = false;
+                let damageMultiplier = 0;
+
+                if (level === 1) {
+                    if (phoneCenterActive) { isDamaged = true; damageMultiplier = 1; }
+                } else if (level === 2) {
+                    if (boss.phase === 1) {
+                        if (phoneRightActive) { isDamaged = true; damageMultiplier = 1; }
+                    } else if (boss.phase === 2) {
+                        if (phoneLeftActive) { isDamaged = true; damageMultiplier += 1; }
+                        if (phoneRightActive) { isDamaged = true; damageMultiplier += 1; }
+                    }
+                }
+
+                if (isDamaged) {
+                    boss.hp -= (dt / 1000) * 20 * damageMultiplier; 
+                    if (boss.hp <= 0) {
+                        if (boss.phase === 1) {
+                            boss.phase = 2;
+                            if (level === 1) {
+                                boss.hp = 100; boss.maxHp = 100; 
+                            } else if (level === 2) {
+                                boss.hp = 370; boss.maxHp = 370; // Vida aumentada (+100 puntos extra)
+                                boss.spawnIdx = 1; 
+                                lightningFlash = 2.0; 
+                                boss.cooldown = 1000; 
+                            }
+                            boss.progress = 0; 
+                            synth.playJumpscare();
+                        } else {
+                            boss.state = 'DEFEATED';
+                            startVictoryAnimation();
+                        }
+                    }
+                }
+                if (boss.progress >= 1 && boss.state !== 'DEFEATED') gameOver();
+            }
+        }
+
+        let allowSpawns = false;
+        if (level === 1) {
+            allowSpawns = (boss.state === 'NONE' || boss.state === 'INTRO');
+        } else if (level === 2) {
+            allowSpawns = (boss.state === 'NONE' || boss.state === 'INTRO' || (boss.state === 'WALKING' && boss.phase === 2 && boss.cooldown <= 0));
+        } else if (level === 3) {
+            allowSpawns = true;
+        }
+
+        if (monsters.length < maxMonsters && allowSpawns) {
+            globalSpawnTimer -= dt;
+            if (globalSpawnTimer <= 0) {
+                spawnMonster();
+                
+                if (level === 1) {
+                    let progress = Math.min(1, timeSurvived / 50000); // Acortado a 50s
+                    let baseTimer = lerp(2500, 300, progress) + Math.random() * lerp(1500, 300, progress);
+                    globalSpawnTimer = baseTimer / difficulty;
+                } else if (level === 2) {
+                    if (boss.state === 'WALKING' && boss.phase === 2) {
+                        globalSpawnTimer = 0; 
+                    } else {
+                        let progressDelay = Math.min(1, Math.max(0, lvl2Elapsed / 55000));
+                        let currentAvgTimer = lerp(2250, 1500, progressDelay);
+                        
+                        globalSpawnTimer = currentAvgTimer * 0.7 + Math.random() * (currentAvgTimer * 0.6);
+                    }
+                } else if (level === 3) {
+                    globalSpawnTimer = 500; 
+                }
+            }
+        }
+
+        let anyWarning = false;
+        if (boss.state === 'INTRO' || boss.state === 'WAITING' || boss.state === 'WALKING') {
+            anyWarning = true;
+        }
+
+        let isAnyPhoneActive = (level === 1 && phoneCenterActive) || (level >= 2 && (phoneLeftActive || phoneRightActive));
+
+        for (let i = monsters.length - 1; i >= 0; i--) {
+            let m = monsters[i];
+            
+            let isDefended = false;
+            if (level === 1) {
+                isDefended = phoneCenterActive;
+            } else {
+                if (m.side === 'left' && phoneLeftActive) isDefended = true;
+                if (m.side === 'right' && phoneRightActive) isDefended = true;
+                if (m.side === 'center' && (phoneLeftActive || phoneRightActive)) isDefended = true;
+            }
+
+            switch (m.state) {
+                case 'WARNING':
+                    anyWarning = true;
+                    m.timer -= dt;
+                    if (m.timer <= 0) m.state = 'ATTACKING';
+                    if (Math.random() < 0.02) synth.playWarning(m.attackSpeedMult); 
+                    break;
+
+                case 'ATTACKING':
+                    if (isDefended) {
+                        m.state = 'DISTRACTED';
+                        m.timer = (level === 3) ? 350 : 1000; 
+                    } else {
+                        const baseAttackSpeed = (dt / 2500);
+                        m.progress += baseAttackSpeed * difficulty * m.attackSpeedMult;
+                        m.wobble += dt * 0.02 * difficulty;
+                        if (m.progress >= 1) gameOver();
+                        if (Math.random() < 0.1) synth.playAttack(m.attackSpeedMult); 
+                    }
+                    break;
+
+                case 'DISTRACTED':
+                    if (!isDefended) {
+                        m.state = 'ATTACKING';
+                    } else {
+                        m.timer -= dt;
+                        if (m.timer <= 0) m.state = 'RETREATING';
+                    }
+                    break;
+
+                case 'RETREATING':
+                    m.progress -= (dt / ((level === 3) ? 280 : 800)); 
+                    if (m.progress <= 0) {
+                        monsters.splice(i, 1);
+                    }
+                    break;
+            }
+        }
+
+        // Solo mostrar la advertencia base durante los primeros 15 segundos del nivel 1
+        if (anyWarning && level === 1 && timeSurvived <= 15000) {
+            warningText.style.opacity = 0.5 + Math.sin(Date.now() / 80) * 0.5;
+        } else {
+            warningText.style.opacity = 0;
+        }
+
+        synth.setReelActive(isAnyPhoneActive);
+    }
+
+    function updateBatteryUI(el, val) {
+        el.style.width = `${val}%`;
+        if (val < 25) el.style.backgroundColor = '#ef4444'; 
+        else if (val < 50) el.style.backgroundColor = '#eab308'; 
+        else el.style.backgroundColor = '#4ade80';
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        
+        // --- EFECTO DE SHAKE DE LA CASA (AUTO PASANDO) ---
+        let shakeX = 0;
+        let shakeY = 0;
+        if (eventCar.active) {
+            let t = eventCar.timer / 1000;
+            // 4 shakes bruscos en intervalos de 0.5s a partir del segundo 8.2
+            if ((t >= 8.2 && t < 8.35) || (t >= 8.7 && t < 8.85) || (t >= 9.2 && t < 9.35) || (t >= 9.7 && t < 9.85)) {
+                shakeX = (Math.random() - 0.5) * 12; 
+                shakeY = (Math.random() - 0.5) * 12;
+            }
+        }
+
+        ctx.save();
+        if (shakeX !== 0 || shakeY !== 0) {
+            ctx.translate(shakeX, shakeY);
+        }
+        
+        drawRoom();
+        
+        if (victoryAnim.active) {
+            drawVictoryAnimation();
+        } else {
+            if (boss.state === 'INTRO' || boss.state === 'WAITING') {
+                drawBoss();
+            }
+
+            let sortedMonsters = [...monsters].sort((a,b) => a.progress - b.progress);
+            for(let m of sortedMonsters) {
+                drawMonster(m);
+            }
+
+            if (boss.state === 'WALKING') {
+                drawBoss();
+            }
+        }
+        
+        drawPlayer();
+        
+        // Finalizamos la capa de movimiento antes del viñetado/flash
+        ctx.restore();
+        
+        if (lightningFlash > 0) {
+            ctx.save();
+            let alpha = Math.min(1, lightningFlash);
+            if (Math.random() > 0.2) { 
+                ctx.fillStyle = `rgba(220, 240, 255, ${alpha * 0.9})`; 
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            ctx.restore();
+        }
+
+        drawVignette();
+        drawBatteryAlert();
+    }
+
+    function drawVictoryAnimation() {
+        let p = Math.min(1, victoryAnim.progress);
+        let easeOut = 1 - Math.pow(1 - p, 3); 
+        
+        let targetX = 450; 
+        let targetY = 350; 
+        
+        let x = lerp(300, targetX, easeOut);
+        let y = lerp(350, targetY, easeOut);
+        let size = lerp(10, 250, easeOut); 
+        let rotation = lerp(0, Math.PI * 8, easeOut); 
+        
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
+        
+        if (imgVictory.complete && imgVictory.naturalWidth > 0) {
+            ctx.drawImage(imgVictory, -size / 2, -size / 2, size, size);
+        } else {
+            ctx.fillStyle = '#FFD700'; 
+            ctx.beginPath();
+            ctx.arc(0, 0, size/2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        ctx.restore();
+    }
+
+    function drawRoom() {
+        ctx.fillStyle = '#0a0b10'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Ventana (Izq)
+        ctx.fillStyle = '#111522'; ctx.fillRect(30, 50, 120, 250);
+        
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(30, 50, 120, 250);
+        ctx.clip(); 
+
+        if (eventCar.active) {
+            let t = eventCar.timer / 1000;
+            // Pasa en 6 segundos (de t=4.0 a t=10.0) para que se vea aún más lento
+            if (t >= 4.0 && t <= 10.0) {
+                let prog = (t - 4.0) / 6.0; 
+                let startX = 160;
+                let endX = -30;
+                let x = startX + (endX - startX) * prog;
+                let y = 220;
+
+                ctx.fillStyle = '#e6e6cc'; // Blanco gris amarillo (mayor contraste)
+                ctx.fillRect(x, y, 60, 25); 
+                ctx.fillRect(x + 10, y - 15, 35, 15); 
+                
+                ctx.fillStyle = 'rgba(255, 255, 150, 0.5)';
+                ctx.beginPath();
+                ctx.moveTo(x, y + 10);
+                ctx.lineTo(x - 100, y - 10);
+                ctx.lineTo(x - 100, y + 30);
+                ctx.fill();
+            }
+        }
+
+        if (eventChicken.active) {
+            let t = eventChicken.timer / 1000;
+            let alpha = 0;
+            if (t <= 1.5) alpha = t / 1.5; 
+            else if (t <= 3.5) alpha = 1.0; 
+            else if (t <= 5.0) alpha = 1.0 - ((t - 3.5) / 1.5); 
+
+            // Reducimos la opacidad máxima a 0.35 para que se vea como un reflejo fantasma
+            ctx.globalAlpha = Math.max(0, Math.min(1, alpha)) * 0.35;
+            if (imgChicken.complete && imgChicken.naturalWidth > 0) {
+                ctx.drawImage(imgChicken, 40, 125, 100, 100);
+            }
+            ctx.globalAlpha = 1.0;
+        }
+
+        ctx.restore(); 
+
+        ctx.strokeStyle = '#05060a'; ctx.lineWidth = 10; ctx.strokeRect(30, 50, 120, 250);
+        ctx.beginPath(); ctx.moveTo(90, 50); ctx.lineTo(90, 300); ctx.moveTo(30, 175); ctx.lineTo(150, 175); ctx.stroke();
+        
+        ctx.fillStyle = '#222';
+        ctx.fillRect(290, 0, 20, 30);
+        ctx.beginPath(); ctx.moveTo(280, 50); ctx.lineTo(320, 50); ctx.lineTo(305, 30); ctx.lineTo(295, 30); ctx.fill();
+        ctx.globalAlpha = Math.random() > 0.1 ? 0.08 : 0.02;
+        ctx.fillStyle = '#ffea00';
+        ctx.beginPath(); ctx.moveTo(280, 50); ctx.lineTo(180, 250); ctx.lineTo(420, 250); ctx.lineTo(320, 50); ctx.fill();
+        ctx.globalAlpha = 1;
+
+        ctx.fillStyle = '#0c0d12'; ctx.fillRect(450, 100, 120, 400); ctx.strokeRect(450, 100, 120, 400);
+        
+        ctx.fillStyle = '#1a1a24'; ctx.fillRect(20, 570, 90, 60); 
+        ctx.fillStyle = '#050508'; ctx.fillRect(25, 575, 80, 50);
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.strokeRect(20, 570, 90, 60);
+        ctx.fillStyle = '#ff0000'; ctx.beginPath(); ctx.arc(100, 625, 2, 0, Math.PI*2); ctx.fill();
+        
+        ctx.fillStyle = '#1c1e2e'; ctx.beginPath(); 
+        ctx.moveTo(170, 800); ctx.lineTo(220, 630); ctx.lineTo(380, 630); ctx.lineTo(430, 800); ctx.fill();
+    }
+
+    function drawPhone(xOffset, isLit, tiltDir = 0, lightColor = '255, 255, 255') {
+        ctx.save();
+        ctx.translate(player.x + xOffset, player.y + 10);
+        
+        if (isLit) {
+            ctx.rotate(-Math.PI / 2 + (tiltDir * 0.5));
+            const gradient = ctx.createLinearGradient(0, 0, 800, 0);
+            gradient.addColorStop(0, `rgba(${lightColor}, 0.5)`);
+            gradient.addColorStop(1, `rgba(${lightColor}, 0)`);
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(800, -400); ctx.lineTo(800, 400); ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    function drawBoss() {
+        if (boss.state === 'NONE' || boss.state === 'DEFEATED') return;
+
+        const spawn = spawnPoints[boss.spawnIdx];
+        const targetX = player.x + 20; 
+        const targetY = player.y - 20;
+
+        let currentX = spawn.x;
+        let currentY = spawn.y;
+        let size = 50;
+        let alpha = 1;
+
+        if (boss.state === 'INTRO' || boss.state === 'WAITING') {
+            let introProgress = Math.max(0, 10000 - boss.timer) / 10000;
+            if (boss.state === 'WAITING') introProgress = 1;
+            
+            alpha = introProgress * 0.5; 
+            size = 50 + (introProgress * 50); 
+        } else if (boss.state === 'WALKING') {
+            currentX = lerp(spawn.x, targetX, boss.progress);
+            currentY = lerp(spawn.y, targetY, boss.progress);
+            currentX += Math.sin(boss.wobble) * 8;
+            currentY += Math.cos(boss.wobble * 1.5) * 5.6;
+            
+            let baseSize = boss.phase === 1 ? 250 : 380;
+            let growth = boss.phase === 1 ? 100 : 200;
+            
+            // Achicamos 20% al Jefe 2 Fase 2
+            if (level === 2 && boss.phase === 2) {
+                baseSize = 304; 
+                growth = 160;
+            }
+            
+            size = baseSize + (boss.progress * growth);
+        }
+
+        ctx.save();
+        ctx.translate(currentX, currentY);
+        ctx.globalAlpha = alpha;
+
+        let activeBossImage = imgBoss1;
+        if (level === 2) {
+            activeBossImage = (boss.phase === 1) ? imgBoss2Ph1 : imgBoss2Ph2;
+        }
+
+        if (activeBossImage && activeBossImage.complete && activeBossImage.naturalWidth > 0) {
+            ctx.drawImage(activeBossImage, -size / 2, -size / 2, size, size);
+        } else {
+            ctx.fillStyle = (level === 2 && boss.phase === 2) ? '#aa00ff' : 'purple'; 
+            ctx.fillRect(-size/2, -size/2, size, size);
+        }
+
+        if (boss.state === 'WALKING') {
+            ctx.globalAlpha = 1; 
+            const barWidth = boss.phase === 1 ? 120 : 180;
+            
+            let barY = -size/2 - 20;
+            if (currentY + barY < 40) {
+                barY = -currentY + 40; 
+            }
+
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(-barWidth/2, barY, barWidth, 12);
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(-barWidth/2, barY, barWidth * (boss.hp / boss.maxHp), 12);
+            ctx.strokeStyle = boss.phase === 1 ? '#fff' : '#ffea00'; 
+            ctx.lineWidth = boss.phase === 1 ? 2 : 3;
+            ctx.strokeRect(-barWidth/2, barY, barWidth, 12);
+        }
+
+        ctx.restore();
+    }
+
+    function drawMonster(m) {
+        const spawn = spawnPoints[m.spawnIdx];
+        let targetX = player.x;
+        if (m.side === 'left') targetX -= 20;
+        else if (m.side === 'right') targetX += 20;
+        const targetY = player.y - 20;
+        
+        let currentX = lerp(spawn.x, targetX, m.progress);
+        let currentY = lerp(spawn.y, targetY, m.progress);
+
+        if (m.state === 'ATTACKING') {
+            let mult = (15 * m.attackSpeedMult);
+            currentX += Math.sin(m.wobble) * mult; 
+            currentY += Math.cos(m.wobble * 1.5) * (mult * 0.7);
+        }
+
+        ctx.save();
+        ctx.translate(currentX, currentY);
+
+        if (m.state === 'WARNING') {
+            ctx.globalAlpha = 0.5 + Math.sin(Date.now() / 80) * 0.5;
+        }
+        if (m.state === 'DISTRACTED') {
+            ctx.globalAlpha = 0.3; 
+        }
+
+        const size = 60 + (m.progress * 130); 
+        const currentImg = monsterImagesArray[m.imgIdx];
+
+        if (currentImg && currentImg.complete && currentImg.naturalWidth > 0) {
+            ctx.drawImage(currentImg, -size / 2, -size / 2, size, size);
+        } else {
+            ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(0, 0, size/2, size*0.75, 0, 0, Math.PI * 2); ctx.fill();
+            let eyeColor = m.state === 'DISTRACTED' ? '#fff' : '#ff0044'; 
+            let eyeSize = size * 0.15;
+            
+            if (m.state === 'DISTRACTED') {
+                eyeSize *= 1.5; ctx.fillStyle = '#4ade80'; 
+            } else {
+                ctx.fillStyle = eyeColor; ctx.shadowColor = eyeColor; ctx.shadowBlur = 10;
+            }
+            ctx.beginPath(); ctx.ellipse(-size * 0.15, -size * 0.2, eyeSize, eyeSize * (m.state === 'DISTRACTED' ? 1 : 0.4), 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(size * 0.15, -size * 0.2, eyeSize, eyeSize * (m.state === 'DISTRACTED' ? 1 : 0.4), 0, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0; 
+        }
+
+        ctx.restore();
+    }
+
+    function drawPlayer() {
+        const imgSize = 200; 
+        
+        let isLighting = false;
+        if (level === 1) isLighting = phoneCenterActive;
+        else isLighting = phoneLeftActive || phoneRightActive;
+
+        let currentImg = isLighting ? imgPlayerLit : imgPlayer;
+        
+        if (currentImg.complete && currentImg.naturalWidth > 0) {
+            ctx.drawImage(currentImg, player.x - (imgSize/2), player.y - (imgSize/2), imgSize, imgSize);
+        } else {
+            ctx.fillStyle = '#d4a373'; ctx.beginPath(); ctx.arc(player.x, player.y - 15, player.radius, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#3a3e5c'; ctx.beginPath(); ctx.arc(player.x, player.y + 30, 60, Math.PI, 0); ctx.fill();
+        }
+
+        if (level === 1) {
+            drawPhone(0, phoneCenterActive, 0, '255, 255, 255');
+        } else {
+            drawPhone(-25, phoneLeftActive, -1, '255, 180, 120'); 
+            drawPhone(25, phoneRightActive, 1, '200, 160, 255');  
+        }
+    }
+
+    function drawJumpscare() {
+        ctx.save(); 
+        ctx.fillStyle = 'rgba(150, 0, 0, 0.4)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(canvas.width/2, canvas.height/2, 250, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ff0000'; ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 50;
+        ctx.beginPath(); ctx.ellipse(canvas.width/2 - 100, canvas.height/2 - 50, 60, 30, Math.PI*0.1, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(canvas.width/2 + 100, canvas.height/2 - 50, 60, 30, -Math.PI*0.1, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.beginPath();
+        ctx.moveTo(canvas.width/2 - 150, canvas.height/2 + 100); ctx.lineTo(canvas.width/2 + 150, canvas.height/2 + 100);
+        for(let i=0; i<10; i++) {
+            ctx.lineTo(canvas.width/2 + 150 - (i*30) - 15, canvas.height/2 + 150 + Math.random()*40);
+            ctx.lineTo(canvas.width/2 + 150 - ((i+1)*30), canvas.height/2 + 100);
+        }
+        ctx.stroke(); ctx.fill();
+        ctx.restore(); 
+    }
+
+    function drawVignette() {
+        const gradient = ctx.createRadialGradient(
+            canvas.width/2, canvas.height/2, canvas.height*0.4,
+            canvas.width/2, canvas.height/2, canvas.height
+        );
+        gradient.addColorStop(0, 'rgba(0,0,0,0)');
+        gradient.addColorStop(1, 'rgba(0,0,0,0.9)');
+        ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'rgba(255,255,255,0.02)';
+        for(let i = 0; i < canvas.height; i += 4) ctx.fillRect(0, i, canvas.width, 1);
+    }
+    
+    function drawBatteryAlert() {
+        let lowestBattery = level === 1 ? batteryLeft : Math.min(batteryLeft, batteryRight);
+        if (lowestBattery <= 30) {
+            const pulse = (Math.sin(Date.now() / 150) + 1) / 2; 
+            const gradient = ctx.createRadialGradient(
+                canvas.width / 2, canvas.height / 2, canvas.height * 0.3, 
+                canvas.width / 2, canvas.height / 2, canvas.height * 0.8  
+            );
+            gradient.addColorStop(0, 'rgba(255, 0, 0, 0)');
+            gradient.addColorStop(1, `rgba(220, 0, 0, ${pulse * 0.5 + 0.1})`); 
+            ctx.fillStyle = gradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+
+    function updateTouches(touches) {
+        if (level === 1) {
+            phoneCenterActive = touches.length > 0 && batteryLeft > 0;
+        } else {
+            phoneLeftActive = false;
+            phoneRightActive = false;
+            for(let i=0; i<touches.length; i++) {
+                let x = touches[i].clientX;
+                if (x < window.innerWidth / 2 && batteryLeft > 0) phoneLeftActive = true;
+                if (x >= window.innerWidth / 2 && batteryRight > 0) phoneRightActive = true;
+            }
+        }
+    }
+
+    function handleKeyDown(e) {
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        if (gameState !== 'PLAYING') return;
+        
+        if (level === 1 && (e.code === 'Space' || e.code === 'ArrowLeft' || e.code === 'ArrowRight')) {
+            if (batteryLeft > 0) phoneCenterActive = true;
+        } else if (level >= 2) {
+            if (e.code === 'ArrowLeft' && batteryLeft > 0) phoneLeftActive = true;
+            if (e.code === 'ArrowRight' && batteryRight > 0) phoneRightActive = true;
+        }
+    }
+
+    function handleKeyUp(e) {
+        if (gameState !== 'PLAYING') return;
+        if (level === 1 && (e.code === 'Space' || e.code === 'ArrowLeft' || e.code === 'ArrowRight')) {
+            phoneCenterActive = false;
+        } else if (level >= 2) {
+            if (e.code === 'ArrowLeft') phoneLeftActive = false;
+            if (e.code === 'ArrowRight') phoneRightActive = false;
+        }
+    }
+    
+    window.addEventListener('mousedown', (e) => {
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        if (gameState !== 'PLAYING') return;
+        updateTouches([{clientX: e.clientX}]); 
+    });
+    window.addEventListener('mouseup', (e) => {
+        if (gameState !== 'PLAYING') return;
+        updateTouches([]); 
+    });
+
+    window.addEventListener('touchstart', (e) => {
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        if (gameState !== 'PLAYING') return;
+        updateTouches(e.touches);
+    }, {passive: false});
+    
+    window.addEventListener('touchmove', (e) => {
+        if (gameState !== 'PLAYING') return;
+        updateTouches(e.touches);
+    }, {passive: false});
+
+    window.addEventListener('touchend', (e) => {
+        if (gameState !== 'PLAYING') return;
+        updateTouches(e.touches);
+    });
+
+    window.addEventListener('touchcancel', (e) => {
+        if (gameState !== 'PLAYING') return;
+        updateTouches(e.touches);
+    });
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('contextmenu', e => e.preventDefault());
+
+</script>
+</body>
+</html>
