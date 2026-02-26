@@ -237,13 +237,19 @@
     <div id="loginScreen" class="screen">
         <h1 class="text-5xl font-bold mb-8 text-green-400">Reel Defender</h1>
         <input type="text" id="playerNameInput" placeholder="Tu nombre..." class="px-4 py-3 text-xl text-black rounded-lg mb-6 text-center font-bold outline-none border-4 border-transparent focus:border-green-400" maxlength="12" autocomplete="off">
-        <button class="btn" onclick="goToTutorial()">Jugar</button>
-        <button class="btn btn-purple" onclick="showRanking()">Ver Ranking Top 10</button>
+        <button class="btn" onclick="goToTutorial()">Entrar</button>
     </div>
 
     <!-- PANTALLA DE RANKING -->
     <div id="rankingScreen" class="screen hidden">
-        <h1 class="text-4xl font-bold mb-6 text-yellow-400">Top 10 Sobrevivientes</h1>
+        <h1 class="text-4xl font-bold mb-4 text-yellow-400">Top 10 Sobrevivientes</h1>
+        
+        <!-- Pestañas de Modos -->
+        <div class="flex gap-4 mb-4">
+            <button id="btnRankNormal" class="px-4 py-2 bg-green-500 text-black font-bold rounded-lg transition" onclick="cambiarPestanaRanking('normal')">Normal</button>
+            <button id="btnRankSupervivencia" class="px-4 py-2 bg-gray-700 text-gray-300 font-bold rounded-lg transition hover:bg-gray-600" onclick="cambiarPestanaRanking('supervivencia')">Supervivencia</button>
+        </div>
+
         <div id="rankingList" class="bg-gray-800 p-6 rounded-lg mb-6 w-80 min-h-[300px] flex flex-col gap-3 shadow-lg shadow-yellow-900/20">
             <p class="text-center text-gray-400">Cargando ranking...</p>
         </div>
@@ -262,6 +268,7 @@
         </p>
         <button class="btn" onclick="startGame()">Comenzar Nivel 1</button>
         <button class="btn btn-purple" onclick="testLevel3()">Modo Supervivencia</button>
+        <button class="btn" style="background-color: #eab308; color: black; margin-top: 15px;" onclick="showRanking()">🏆 Ver Ranking Top 10</button>
     </div>
 
     <div id="level2Screen" class="screen hidden">
@@ -293,7 +300,7 @@
             <p id="gameOverScoreLabel" class="text-gray-400 text-sm text-center">TIEMPO SOBREVIVIDO</p>
             <p class="text-4xl font-mono text-white" id="finalScore">00:00:00</p>
         </div>
-        <button class="btn" onclick="resetGame()">Intentar de Nuevo</button>
+        <button class="btn" onclick="resetGame()">Ir a Inicio</button>
     </div>
 </div>
 
@@ -365,6 +372,8 @@
     // --- NUEVAS VARIABLES PARA EL RANKING ---
     let playerName = "";
     const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbxp-8jd8As2Gr1SN_rgSoh0TmIePSQgJnOzZ3qzGne8WmTdHO9wK-o8ExVkk8tRnUfn/exec"; 
+    let rankingData = { normal: [], supervivencia: [] };
+    let currentRankTab = 'normal';
 
     // UI Elements
     const loginScreen = document.getElementById('loginScreen');
@@ -612,7 +621,7 @@
     }
 
     function resetGame() {
-        loginScreen.classList.remove('hidden');
+        startScreen.classList.remove('hidden');
         gameOverScreen.classList.add('hidden');
         mainUI.style.opacity = '0';
         gameState = 'MENU';
@@ -990,6 +999,7 @@
                 eventCar.active = true;
                 eventCar.timer = 0;
                 audioCar.volume = 0.8; 
+                audioCar.currentTime = 0.3;
                 audioCar.play().catch(e=>console.log(e));
             }
             if (timeSurvived >= 30000 && !eventChicken.triggered) {
@@ -1727,46 +1737,79 @@
         startScreen.classList.remove('hidden'); 
     }
 
+    function cambiarPestanaRanking(modo) {
+        currentRankTab = modo;
+        
+        // Actualizar estilos de los botones
+        document.getElementById('btnRankNormal').className = modo === 'normal' 
+            ? 'px-4 py-2 bg-green-500 text-black font-bold rounded-lg transition' 
+            : 'px-4 py-2 bg-gray-700 text-gray-300 font-bold rounded-lg transition hover:bg-gray-600';
+            
+        document.getElementById('btnRankSupervivencia').className = modo === 'supervivencia' 
+            ? 'px-4 py-2 bg-purple-500 text-white font-bold rounded-lg transition' 
+            : 'px-4 py-2 bg-gray-700 text-gray-300 font-bold rounded-lg transition hover:bg-gray-600';
+            
+        renderRankingList();
+    }
+
+    function renderRankingList() {
+        let datos = rankingData[currentRankTab] || [];
+        rankingList.innerHTML = '';
+        
+        if (datos.length === 0) {
+            rankingList.innerHTML = '<p class="text-center text-gray-400 mt-4">Aún no hay puntajes en este modo.</p>';
+            return;
+        }
+        
+        // Dibujamos el Top 10 del modo seleccionado
+        datos.forEach((jugador, index) => {
+            let colorNombre = index === 0 ? 'text-yellow-400 text-xl' : 'text-white';
+            rankingList.innerHTML += `
+                <div class="flex justify-between items-center border-b border-gray-700 pb-2">
+                    <span class="font-bold ${colorNombre}">${index + 1}. ${jugador.nombre}</span>
+                    <span class="text-green-400 font-mono text-lg">${formatTime(jugador.puntaje)}</span>
+                </div>
+            `;
+        });
+    }
+
     function showRanking() {
-        loginScreen.classList.add('hidden');
+        startScreen.classList.add('hidden');
         rankingScreen.classList.remove('hidden');
-        rankingList.innerHTML = '<p class="text-center text-gray-400 animate-pulse">Cargando ranking...</p>';
+        rankingList.innerHTML = '<p class="text-center text-gray-400 animate-pulse mt-4">Cargando ranking...</p>';
 
         fetch(URL_GOOGLE_SCRIPT)
         .then(res => res.json())
         .then(datos => {
-            rankingList.innerHTML = '';
-            if (datos.length === 0) {
-                rankingList.innerHTML = '<p class="text-center text-gray-400">Aún no hay puntajes.</p>';
-                return;
-            }
-            // Dibujamos el Top 10
-            datos.forEach((jugador, index) => {
-                let colorNombre = index === 0 ? 'text-yellow-400 text-xl' : 'text-white';
-                rankingList.innerHTML += `
-                    <div class="flex justify-between items-center border-b border-gray-700 pb-2">
-                        <span class="font-bold ${colorNombre}">${index + 1}. ${jugador.nombre}</span>
-                        <span class="text-green-400 font-mono text-lg">${formatTime(jugador.puntaje)}</span>
-                    </div>
-                `;
-            });
+            // Guardamos la info que viene separada desde el Apps Script
+            rankingData = datos;
+            // Dibujamos la pestaña que esté activa (por defecto arranca en 'normal')
+            renderRankingList();
         })
         .catch(err => {
             console.error("Error:", err);
-            rankingList.innerHTML = '<p class="text-center text-red-400">Error al cargar el ranking.</p>';
+            rankingList.innerHTML = '<p class="text-center text-red-400 mt-4">Error al cargar el ranking.</p>';
         });
     }
 
     function hideRanking() {
         rankingScreen.classList.add('hidden');
-        loginScreen.classList.remove('hidden');
+        startScreen.classList.remove('hidden');
     }
 
     function enviarPuntaje() {
-        if (timeSurvived > 0) {
+        // Determinamos el score real a guardar y el modo jugado
+        let scoreToSave = startedFromSurvival ? (timeSurvived - level3StartTime) : timeSurvived;
+        let modoToSave = startedFromSurvival ? 'supervivencia' : 'normal';
+
+        if (scoreToSave > 0) {
             fetch(URL_GOOGLE_SCRIPT, {
                 method: 'POST',
-                body: JSON.stringify({ nombre: playerName, puntaje: timeSurvived }) 
+                body: JSON.stringify({ 
+                    nombre: playerName, 
+                    puntaje: scoreToSave,
+                    modo: modoToSave 
+                }) 
             }).catch(err => console.error("Error al guardar:", err));
         }
     }
