@@ -65,8 +65,6 @@
             pointer-events: none;
         }
         .btn {
-            margin-top: 20px;
-            padding: 12px 24px;
             background-color: #4ade80;
             color: #050505;
             font-weight: bold;
@@ -75,20 +73,25 @@
             cursor: pointer;
             border: 2px solid transparent;
             transition: all 0.2s;
-            font-size: 1.2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        .btn:hover {
+        .btn:hover:not(:disabled) {
             background-color: #22c55e;
             transform: scale(1.05);
+        }
+        .btn:disabled {
+            background-color: #374151 !important;
+            color: #9ca3af !important;
+            cursor: not-allowed;
+            transform: none;
         }
         .btn-purple {
             background-color: #a855f7;
             color: white;
-            margin-top: 10px;
-            font-size: 1rem;
-            padding: 10px 20px;
         }
-        .btn-purple:hover {
+        .btn-purple:hover:not(:disabled) {
             background-color: #9333ea;
         }
         #hud {
@@ -210,7 +213,7 @@
         .custom-scrollbar::-webkit-scrollbar-track {
             background: rgba(0, 0, 0, 0.2);
             border-radius: 8px;
-            margin-block: 5px; /* Da un pequeño margen arriba y abajo */
+            margin-block: 5px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
             background-color: #4ade80;
@@ -223,6 +226,24 @@
 <div id="game-container">
     <canvas id="gameCanvas" width="600" height="800"></canvas>
     
+    <!-- Destello Blanco Puro -->
+    <div id="whiteFlash" class="fixed inset-0 bg-white z-[100] transition-opacity duration-300 pointer-events-none" style="display: none; opacity: 0;"></div>
+
+    <!-- Transición de Imagen Revivir -->
+    <div id="reviveImageContainer" class="fixed inset-0 z-[90] flex justify-center items-center pointer-events-none" style="display: none;">
+        <img id="reviveTransitionImg" src="https://github.com/LucasTiri/Noche-de-Reels-y-Gordos/blob/main/IMG-20260122-WA0078(1)(1).png?raw=true" class="max-w-[80%] max-h-[80%] opacity-0" style="transition-property: opacity; transition-duration: 2000ms;">
+    </div>
+
+    <!-- Cuenta regresiva (3..2..1) -->
+    <div id="resumeCountdown" class="absolute inset-0 flex justify-center items-center text-[15rem] text-white font-bold z-[85] pointer-events-none drop-shadow-[0_0_30px_rgba(255,255,255,0.8)]" style="display: none;"></div>
+
+    <!-- Contador de Monedas Global (visible casi siempre post-login) -->
+    <div id="coinHUD" class="absolute top-4 right-4 text-xl font-bold text-yellow-400 bg-gray-900/90 px-4 py-2 rounded-xl border border-yellow-600 shadow-lg shadow-yellow-900/30 z-[70] hidden pointer-events-auto flex items-center gap-2">
+        <span>🪙</span> 
+        <span id="coinTotalHUD">0</span>
+        <span id="coinAddedHUD" class="text-green-400 text-base ml-1 opacity-0 transition-opacity duration-300 font-mono"></span>
+    </div>
+
     <div class="ui-layer" id="mainUI" style="opacity: 0;">
         <div id="hud">
             <div class="battery-wrapper" id="leftBatteryWrapper">
@@ -247,20 +268,20 @@
     </div>
 
     <!-- PANTALLA DE LOGIN -->
-    <div id="loginScreen" class="screen">
-        <h1 class="text-5xl font-bold mb-8 text-green-400">Reel Defender</h1>
+    <div id="loginScreen" class="screen z-[80]">
+        <h1 class="text-5xl font-bold mb-2 text-green-400">Reel Defender</h1>
+        <p class="text-gray-300 mb-8 font-bold">Crea tu usuario y contraseña, ¡no los olvides!</p>
         <input type="text" id="playerNameInput" placeholder="Tu nombre..." class="px-4 py-3 text-xl text-black rounded-lg mb-4 text-center font-bold outline-none border-4 border-transparent focus:border-green-400" maxlength="12" autocomplete="off">
         <input type="password" id="playerPinInput" placeholder="Tu PIN secreto..." class="px-4 py-3 text-xl text-black rounded-lg mb-6 text-center font-bold outline-none border-4 border-transparent focus:border-green-400" maxlength="4" autocomplete="off">
     
-        <button id="btnEntrar" class="btn" onclick="iniciarSesion()">Entrar</button>
+        <button id="btnEntrar" class="btn w-[280px] py-4 text-xl" onclick="iniciarSesion()">Entrar</button>
         <p id="loginError" class="text-red-500 mt-4 font-bold hidden">Error</p>
     </div>
 
     <!-- PANTALLA DE RANKING -->
-    <div id="rankingScreen" class="screen hidden">
+    <div id="rankingScreen" class="screen hidden z-[60]">
         <h1 class="text-4xl font-bold mb-4 text-yellow-400">Top 15 Sobrevivientes</h1>
         
-        <!-- Pestañas de Modos -->
         <div class="flex gap-4 mb-4">
             <button id="btnRankNormal" class="px-4 py-2 bg-green-500 text-black font-bold rounded-lg transition" onclick="cambiarPestanaRanking('normal')">Normal</button>
             <button id="btnRankSupervivencia" class="px-4 py-2 bg-gray-700 text-gray-300 font-bold rounded-lg transition hover:bg-gray-600" onclick="cambiarPestanaRanking('supervivencia')">Supervivencia</button>
@@ -269,25 +290,28 @@
         <div id="rankingList" class="bg-gray-800 p-4 rounded-lg mb-6 w-80 max-w-[90vw] max-h-[50vh] overflow-y-auto flex flex-col gap-3 shadow-lg shadow-yellow-900/20 custom-scrollbar">
             <p class="text-center text-gray-400">Cargando ranking...</p>
         </div>
-        <button class="btn" onclick="hideRanking()">Volver</button>
+        <button class="btn px-8 py-3 text-lg mt-0" onclick="hideRanking()">Volver</button>
     </div>
 
     <!-- PANTALLA DEL TUTORIAL (START) -->
-    <div id="startScreen" class="screen hidden">
-        <h1 class="text-5xl font-bold mb-4 text-green-400">Reel Defender</h1>
-        <p class="text-lg max-w-2xl mb-4">Estás viendo reels en la cama a las 3 AM. No estás solo.</p>
-        <div class="controls-hint text-xl font-bold">
+    <div id="startScreen" class="screen hidden z-[60]">
+        <h1 class="text-6xl font-bold mb-8 text-green-400">Reel Defender</h1>
+        
+        <div class="controls-hint text-xl font-bold mb-10 w-full max-w-sm">
             MANTÉN PULSADA LA PANTALLA para mostrarle un reel y ahuyentarlo.
         </div>
-        <p class="text-md text-gray-300 max-w-xl mb-6">
-            Gestiona la batería de tu teléfono. Si llega a 0, se apagará.
-        </p>
-        <button class="btn" onclick="startGame()">Comenzar Nivel 1</button>
-        <button class="btn btn-purple" onclick="testLevel3()">Modo Supervivencia</button>
-        <button class="btn" style="background-color: #eab308; color: black; margin-top: 15px;" onclick="showRanking()">🏆 Ver Ranking Top 15</button>
+        
+        <div class="flex flex-col gap-4 items-center w-full max-w-sm">
+            <button class="btn !m-0 w-[280px] h-[64px] text-xl" onclick="startGame()">Comenzar Nivel 1</button>
+            <button class="btn btn-purple !m-0 w-[280px] h-[64px] text-xl" onclick="testLevel3()">Modo Supervivencia</button>
+        </div>
+        
+        <div class="mt-10 flex flex-col gap-4 items-center w-full max-w-sm">
+            <button class="btn !m-0 w-[280px] h-[64px] text-xl" style="background-color: #eab308; color: black;" onclick="showRanking()">🏆 Ver Ranking Top 15</button>
+        </div>
     </div>
 
-    <div id="level2Screen" class="screen hidden">
+    <div id="level2Screen" class="screen hidden z-[60]">
         <h1 class="text-4xl font-bold mb-4 text-yellow-400">¡NUEVO NIVEL!</h1>
         <p class="text-lg mb-4">La noche se complica. Ahora atacan en parejas.</p>
         <div class="controls-hint">
@@ -295,10 +319,10 @@
             <p>Toca la <strong>MITAD IZQUIERDA</strong> de la pantalla para alumbrar a la izquierda.</p>
             <p>Toca la <strong>MITAD DERECHA</strong> de la pantalla para alumbrar a la derecha.</p>
         </div>
-        <button class="btn" onclick="startLevel2()">Continuar Sobreviviendo</button>
+        <button class="btn px-8 py-4 text-xl mt-0" onclick="startLevel2()">Continuar Sobreviviendo</button>
     </div>
 
-    <div id="level3Screen" class="screen hidden">
+    <div id="level3Screen" class="screen hidden z-[60]">
         <h1 class="text-4xl font-bold mb-4 text-purple-400">¡MODO SUPERVIVENCIA!</h1>
         <p class="text-lg mb-4">Has ahuyentado a la peor pesadilla, pero la noche no acaba.</p>
         <div class="controls-hint">
@@ -306,17 +330,32 @@
             <p>Ellos huyen más rápido y tú recargas más rápido.</p>
             <p>Pero aparecerán sin cesar cada 0.5 segundos.</p>
         </div>
-        <button class="btn" onclick="startLevel3()">Luchar hasta el final</button>
+        <button class="btn px-8 py-4 text-xl mt-0" onclick="startLevel3()">Luchar hasta el final</button>
     </div>
 
-    <div id="gameOverScreen" class="screen hidden">
+    <!-- PANTALLA INTERMEDIA DE REVIVIR -->
+    <div id="reviveScreen" class="screen hidden bg-black/95 z-[65]">
+        <button onclick="skipRevive()" class="absolute top-6 right-6 text-white text-5xl font-bold opacity-70 hover:opacity-100 transition-opacity">&times;</button>
+        <h2 class="text-5xl font-bold text-blue-400 mb-10 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]">¿UNA OPORTUNIDAD MÁS?</h2>
+        
+        <div class="text-8xl font-mono text-red-500 mb-10 font-bold" id="reviveTimerDisplay">5</div>
+        
+        <button id="btnBuyRevive" class="btn !bg-blue-600 hover:!bg-blue-500 !text-white text-2xl py-4 px-8 border-2 border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.5)] flex flex-col items-center mt-0" onclick="buyRevive()">
+            <span>REVIVIR AHORA</span>
+            <span class="text-lg text-blue-200 mt-1">Costo: <span id="reviveCostDisplay">100</span> 🪙</span>
+        </button>
+        <p id="reviveErrorMsg" class="text-red-400 mt-4 text-lg font-bold hidden bg-red-900/50 px-4 py-2 rounded">Faltan monedas para comprar esta vida.</p>
+    </div>
+
+    <!-- PANTALLA DE GAME OVER REAL -->
+    <div id="gameOverScreen" class="screen hidden z-[60]">
         <h1 id="gameOverTitle" class="text-6xl font-bold mb-2 text-red-600 uppercase">TE ATRAPÓ</h1>
         <p id="gameOverSubtitle" class="text-xl mb-6">Dejaste de scrollear.</p>
         <div id="gameOverBox" class="bg-gray-800 p-6 rounded-lg mb-6 shadow-lg shadow-red-900/50 flex flex-col items-center">
             <p id="gameOverScoreLabel" class="text-gray-400 text-sm text-center">TIEMPO SOBREVIVIDO</p>
             <p class="text-4xl font-mono text-white" id="finalScore">00:00:00</p>
         </div>
-        <button class="btn" onclick="resetGame()">Ir a Inicio</button>
+        <button class="btn px-8 py-4 text-xl mt-0" onclick="resetGame()">Ir a Inicio</button>
     </div>
 </div>
 
@@ -326,61 +365,37 @@
 
 // --- IMÁGENES ---
     const imgLevelStarSrc = "https://i.postimg.cc/cHjz4Zqd/20260125-152321(1)(1).png"; 
+    const imgPlayer = new Image(); imgPlayer.src = "https://i.postimg.cc/XqKdNbm2/IMG-20260225-WA0043(1).png"; 
+    const imgPlayerLit = new Image(); imgPlayerLit.src = "https://i.postimg.cc/hv8T4B68/1772063833308.png";
+    const imgBoss1 = new Image(); imgBoss1.src = "https://i.postimg.cc/wM5LxpZh/Screenshot-20260225-210932-Gallery.png";
+    const imgBoss2Ph1 = new Image(); imgBoss2Ph1.src = "https://i.postimg.cc/j5jrGWZD/Screenshot-20260226-122551-Gallery.png";
+    const imgBoss2Ph2 = new Image(); imgBoss2Ph2.src = "https://i.postimg.cc/tgQ8F97q/Screenshot-20260226-123607-Gallery.png";
 
-    const imgPlayer = new Image();
-    imgPlayer.src = "https://i.postimg.cc/XqKdNbm2/IMG-20260225-WA0043(1).png"; 
+    const imgMonster1 = new Image(); imgMonster1.src = "https://i.postimg.cc/prQzVH4k/20260214-005650(1).png";
+    const imgMonster2 = new Image(); imgMonster2.src = "https://i.postimg.cc/x8GMj2h6/IMG-20260127-WA0238.png";
+    const imgMonster3 = new Image(); imgMonster3.src = "https://i.postimg.cc/WzmgpvCX/IMG-20260127-WA0318.png";
+    const imgMonster4 = new Image(); imgMonster4.src = "https://i.postimg.cc/L5kL4pwV/IMG-20260214-WA0005(1).png";
+    const imgMonster5 = new Image(); imgMonster5.src = "https://i.postimg.cc/L5kL4pwf/IMG-20260225-WA0088.png";
+    const imgMonster6 = new Image(); imgMonster6.src = "https://i.postimg.cc/mk3CZsJ6/Screenshot-20260225-174400-Photos.png";
+    const imgMonster7 = new Image(); imgMonster7.src = "https://i.postimg.cc/kGNKMmz1/Screenshot-20260225-174612-Gallery.png";
+    const imgMonster8 = new Image(); imgMonster8.src = "https://i.postimg.cc/90PZXhKp/Screenshot-20260225-193552-Intent-Resolver.png";
+    const imgMonster9 = new Image(); imgMonster9.src = "https://i.postimg.cc/3NjmrTVC/Screenshot-20260225-202605-Whats-App(1).png";
+    const imgMonster10 = new Image(); imgMonster10.src = "https://i.postimg.cc/SRLCQh3C/Screenshot-20260225-210912-Gallery(1).png";
+    const imgMonster11 = new Image(); imgMonster11.src = "https://i.postimg.cc/C5CkMgXG/Screenshot-20260225-211200-Gallery.png";
+    const imgMonster12 = new Image(); imgMonster12.src = "https://i.postimg.cc/D0QLfTH1/Screenshot-20260225-211848-Photos.png";
+    const imgMonster13 = new Image(); imgMonster13.src = "https://i.postimg.cc/NF8mGcSH/Screenshot-20260225-215552-One-UI-Home.png";
+    const imgVictory = new Image(); imgVictory.src = "https://i.postimg.cc/MTm1GmfV/20260125-152321.png";
+
+    const imgChicken = new Image(); imgChicken.src = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTyQ3bP1PZlL3pL6xXOkLoRDqWHryvokaboDg&s";
     
-    const imgPlayerLit = new Image();
-    imgPlayerLit.src = "https://i.postimg.cc/hv8T4B68/1772063833308.png";
-
-    const imgBoss1 = new Image();
-    imgBoss1.src = "https://i.postimg.cc/wM5LxpZh/Screenshot-20260225-210932-Gallery.png";
-
-    const imgBoss2Ph1 = new Image();
-    imgBoss2Ph1.src = "https://i.postimg.cc/j5jrGWZD/Screenshot-20260226-122551-Gallery.png";
-    
-    const imgBoss2Ph2 = new Image();
-    imgBoss2Ph2.src = "https://i.postimg.cc/tgQ8F97q/Screenshot-20260226-123607-Gallery.png";
-
-    const imgMonster1 = new Image();
-    imgMonster1.src = "https://i.postimg.cc/prQzVH4k/20260214-005650(1).png";
-    const imgMonster2 = new Image();
-    imgMonster2.src = "https://i.postimg.cc/x8GMj2h6/IMG-20260127-WA0238.png";
-    const imgMonster3 = new Image();
-    imgMonster3.src = "https://i.postimg.cc/WzmgpvCX/IMG-20260127-WA0318.png";
-    const imgMonster4 = new Image();
-    imgMonster4.src = "https://i.postimg.cc/L5kL4pwV/IMG-20260214-WA0005(1).png";
-    const imgMonster5 = new Image();
-    imgMonster5.src = "https://i.postimg.cc/L5kL4pwf/IMG-20260225-WA0088.png";
-    const imgMonster6 = new Image();
-    imgMonster6.src = "https://i.postimg.cc/mk3CZsJ6/Screenshot-20260225-174400-Photos.png";
-    const imgMonster7 = new Image();
-    imgMonster7.src = "https://i.postimg.cc/kGNKMmz1/Screenshot-20260225-174612-Gallery.png";
-    const imgMonster8 = new Image();
-    imgMonster8.src = "https://i.postimg.cc/90PZXhKp/Screenshot-20260225-193552-Intent-Resolver.png";
-    const imgMonster9 = new Image();
-    imgMonster9.src = "https://i.postimg.cc/3NjmrTVC/Screenshot-20260225-202605-Whats-App(1).png";
-    const imgMonster10 = new Image();
-    imgMonster10.src = "https://i.postimg.cc/SRLCQh3C/Screenshot-20260225-210912-Gallery(1).png";
-    const imgMonster11 = new Image();
-    imgMonster11.src = "https://i.postimg.cc/C5CkMgXG/Screenshot-20260225-211200-Gallery.png";
-    const imgMonster12 = new Image();
-    imgMonster12.src = "https://i.postimg.cc/D0QLfTH1/Screenshot-20260225-211848-Photos.png";
-    const imgMonster13 = new Image();
-    imgMonster13.src = "https://i.postimg.cc/NF8mGcSH/Screenshot-20260225-215552-One-UI-Home.png";
-
-    const imgVictory = new Image();
-    imgVictory.src = "https://i.postimg.cc/MTm1GmfV/20260125-152321.png";
-
-    // --- IMÁGENES Y AUDIOS DE EVENTOS DE VENTANA ---
-    const imgChicken = new Image();
-    imgChicken.src = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTyQ3bP1PZlL3pL6xXOkLoRDqWHryvokaboDg&s";
-    
-    // IMPORTANTE: preload = 'auto' necesario en iOS para controlar currentTime antes de darle Play
     const audioCar = new Audio('https://www.myinstants.com/media/sounds/oye-gela-escuchate-esto-saturado.mp3');
     audioCar.preload = 'auto';
     const audioChicken = new Audio('https://www.myinstants.com/media/sounds/chicken-on-tree-screaming.mp3');
     audioChicken.preload = 'auto';
+    
+    // --- AUDIO PARA TRANSICIÓN DE REVIVIR ---
+    const audioReviveMusic = new Audio("https://github.com/LucasTiri/Noche-de-Reels-y-Gordos/raw/refs/heads/main/BLANCA%20-%20La%20Bondad%20de%20Dios_%20Video%20de%20Letras%20Oficial.mp3");
+    audioReviveMusic.preload = 'auto';
 
     const monsterImagesArray = [
         imgMonster1, imgMonster2, imgMonster3, imgMonster4, imgMonster5, 
@@ -388,13 +403,19 @@
         imgMonster11, imgMonster12, imgMonster13
     ];
 
-    // --- NUEVAS VARIABLES PARA EL RANKING ---
+    // --- VARIABLES DE USUARIO Y RANKING ---
     const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbxp-8jd8As2Gr1SN_rgSoh0TmIePSQgJnOzZ3qzGne8WmTdHO9wK-o8ExVkk8tRnUfn/exec"; 
     let playerName = "";
     let playerPin = "";
     let playerMonedas = 0;
     let rankingData = { normal: [], supervivencia: [] };
     let currentRankTab = 'normal';
+
+    // --- SISTEMA DE REVIVIR ---
+    const maxRevives = 3;
+    let revivesUsed = 0;
+    const reviveCosts = [100, 150, 200];
+    let reviveCountdown = 5.0;
 
     // UI Elements
     const loginScreen = document.getElementById('loginScreen');
@@ -405,8 +426,10 @@
     const startScreen = document.getElementById('startScreen');
     const level2Screen = document.getElementById('level2Screen');
     const level3Screen = document.getElementById('level3Screen');
+    const reviveScreen = document.getElementById('reviveScreen');
     const gameOverScreen = document.getElementById('gameOverScreen');
     const mainUI = document.getElementById('mainUI');
+    
     const timerDisplay = document.getElementById('timerDisplay');
     const survivalTimerDisplay = document.getElementById('survivalTimerDisplay');
     const levelIndicator = document.getElementById('levelIndicator');
@@ -430,9 +453,8 @@
     windSound.volume = 0.9;    
     windSound.preload = 'auto';
 
-    // --- NUEVO SISTEMA DE REELS ---
+    // --- SISTEMA DE REELS ---
     const MASTER_REEL_VOLUME = 1.0; 
-
     const reelSoundsPaths = [
         "https://www.myinstants.com/media/sounds/lingan-guli-wacha.mp3",
         "https://www.myinstants.com/media/sounds/salesman-squid-game-edit-audio-blah-phonk.mp3",
@@ -443,7 +465,6 @@
 
     let reelAudios = [];
     let isReelPlaying = false;
-    
     const REEL_BASE_VOL = 0.04 * MASTER_REEL_VOLUME; 
     const REEL_ACTIVE_VOL = 0.195 * MASTER_REEL_VOLUME; 
 
@@ -459,7 +480,7 @@
 
     reelSoundsPaths.forEach((path) => {
         let a = new Audio(path);
-        a.preload = 'auto'; // Importante para iOS
+        a.preload = 'auto'; 
         a.volume = REEL_BASE_VOL;
         a.addEventListener('ended', () => {
             a.currentTime = 0;
@@ -472,7 +493,6 @@
         reelAudios.push(a);
     });
 
-    // Web Audio API
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     let audioCtx;
 
@@ -508,9 +528,7 @@
             this.lfo = audioCtx.createOscillator(); const lfoGain = audioCtx.createGain();
             this.lfo.type = 'sine'; this.lfo.frequency.value = 0.15; 
             lfoGain.gain.value = 0.55; 
-            
             this.bgmGain.gain.value = 0.75; 
-            
             this.lfo.connect(lfoGain); lfoGain.connect(this.bgmGain.gain);
             this.bgmOsc.connect(this.bgmGain); this.bgmGain.connect(audioCtx.destination);
             this.bgmOsc.start(); this.lfo.start();
@@ -555,22 +573,11 @@
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4); 
             osc1.connect(gain); osc2.connect(gain); gain.connect(audioCtx.destination);
             osc1.start(); osc2.start(); osc1.stop(audioCtx.currentTime + 0.4); osc2.stop(audioCtx.currentTime + 0.4);
-        },
-        playAttack: function(speedMult) {
-            const freq = 600 + (speedMult * 500) + (Math.random() * 300);
-            this.playTone(freq, 'sawtooth', 0.08, 0.2);
-        },
-        playJumpscare: function() {
-            this.playTone(150, 'square', 1.5, 0.8);
-            this.playTone(200, 'sawtooth', 1.5, 0.8);
-            this.playTone(80, 'sawtooth', 1.5, 0.9);
         }
     };
 
     synth.preload();
 
-    // --- DESBLOQUEO DE AUDIO PARA IOS (IPHONE) ---
-    // iOS bloquea cualquier cambio de volumen o reproducción si no se hace en el mismo click.
     let iosAudioUnlocked = false;
     function unlockGlobalAudio() {
         if (iosAudioUnlocked) return;
@@ -583,16 +590,15 @@
         }
         if (audioCtx.state === 'suspended') audioCtx.resume();
 
-        // Reproducir y pausar rápidamente todos los audios en silencio ("cebar" la pista)
-        const allAudios = [...reelAudios, audioCar, audioChicken, windSound];
+        const allAudios = [...reelAudios, audioCar, audioChicken, windSound, audioReviveMusic];
         allAudios.forEach(a => {
-            a.muted = true; // Que el jugador no lo escuche
+            a.muted = true; 
             let p = a.play();
             if (p !== undefined) {
                 p.then(() => {
                     a.pause();
                     a.currentTime = 0;
-                    a.muted = false; // Lo desmuteamos para cuando deba sonar de verdad
+                    a.muted = false; 
                 }).catch(() => {
                     a.muted = false;
                 });
@@ -601,7 +607,6 @@
         iosAudioUnlocked = true;
     }
 
-    // Escuchar el primer toque en la pantalla para desbloquear todo
     document.addEventListener('touchstart', unlockGlobalAudio, {once: true});
     document.addEventListener('mousedown', unlockGlobalAudio, {once: true});
 
@@ -643,7 +648,6 @@
     };
 
     let victoryAnim = { active: false, progress: 0 }; 
-
     const player = { x: 300, y: 700, radius: 25 };
 
     const spawnPoints = [
@@ -679,6 +683,10 @@
         }
     }
 
+    function updateCoinHUD() {
+        document.getElementById('coinTotalHUD').textContent = playerMonedas;
+    }
+
     function resetGame() {
         startScreen.classList.remove('hidden');
         gameOverScreen.classList.add('hidden');
@@ -712,6 +720,7 @@
         difficulty = 1;
         level = 1;
         maxMonsters = 1;
+        revivesUsed = 0; 
         
         lastSpawnSide = 'none';
         consecutiveSideCount = 0;
@@ -735,7 +744,7 @@
         globalSpawnTimer = 2000;
         warningText.style.opacity = '0';
         
-        lastTime = 0; 
+        lastTime = performance.now(); 
         requestAnimationFrame(gameLoop);
         
         synth.init();
@@ -758,6 +767,7 @@
         gameState = 'PLAYING';
         timeSurvived = 240000; 
         level3StartTime = 240000; 
+        revivesUsed = 0; 
         
         difficulty = 2.0; 
         level = 3;
@@ -781,7 +791,7 @@
         globalSpawnTimer = 500; 
         warningText.style.opacity = '0';
 
-        lastTime = 0; 
+        lastTime = performance.now(); 
         requestAnimationFrame(gameLoop);
 
         synth.init();
@@ -838,7 +848,7 @@
         boss = { state: 'NONE', timer: 10000, progress: 0, wobble: 0, hp: 50, maxHp: 50, phase: 1, spawnIdx: 3, cooldown: 0 };
         
         gameState = 'PLAYING';
-        lastTime = 0;
+        lastTime = performance.now();
         synth.playBGM(); 
         synth.startReelSystem(); 
         requestAnimationFrame(gameLoop);
@@ -887,20 +897,214 @@
         boss = { state: 'DEFEATED', timer: 10000, progress: 0, wobble: 0, hp: 50, maxHp: 50, phase: 1, spawnIdx: 3, cooldown: 0 };
         
         gameState = 'PLAYING';
-        lastTime = 0;
+        lastTime = performance.now();
         synth.playBGM(); 
         synth.startReelSystem(); 
         requestAnimationFrame(gameLoop);
     }
 
-    function gameOver() {
-        enviarPuntaje();
+    // --- NUEVO MANEJO DE MUERTE Y REVIVIR ---
+    function handleDeath() {
+        if (revivesUsed < maxRevives) {
+            gameState = 'REVIVE_PROMPT';
+            reviveCountdown = 5.0;
+            document.getElementById('reviveTimerDisplay').textContent = "5";
+            
+            const cost = reviveCosts[revivesUsed];
+            document.getElementById('reviveCostDisplay').textContent = cost;
+            
+            const btnBuy = document.getElementById('btnBuyRevive');
+            const errorMsg = document.getElementById('reviveErrorMsg');
+            
+            if (playerMonedas >= cost) {
+                btnBuy.disabled = false;
+                errorMsg.classList.add('hidden');
+            } else {
+                btnBuy.disabled = true;
+                errorMsg.classList.remove('hidden');
+            }
+
+            mainUI.style.opacity = '0';
+            reviveScreen.classList.remove('hidden');
+
+            // Pausa audios
+            synth.stopBGM();
+            windSound.pause();
+            synth.stopReelSystem(); 
+            audioCar.pause();
+            audioChicken.pause();
+
+            drawRoom();
+        } else {
+            realGameOver();
+        }
+    }
+
+    function skipRevive() {
+        reviveScreen.classList.add('hidden');
+        realGameOver();
+    }
+
+    function buyRevive() {
+        const cost = reviveCosts[revivesUsed];
+        if (playerMonedas >= cost) {
+            playerMonedas -= cost;
+            revivesUsed++;
+            updateCoinHUD();
+            
+            // Avisar a la API que se gastaron monedas
+            fetch(URL_GOOGLE_SCRIPT, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'deductCoins',
+                    nombre: playerName,
+                    pin: playerPin,
+                    amount: cost
+                })
+            }).catch(e => console.log(e));
+
+            // Transición Épica
+            gameState = 'REVIVE_TRANSITION';
+            
+            const flash = document.getElementById('whiteFlash');
+            flash.style.display = 'block';
+            void flash.offsetWidth; // Forzar repintado
+            flash.style.opacity = '1';
+
+            // Tras 100ms ocultamos la pantalla de revivir y empezamos a quitar el destello
+            setTimeout(() => {
+                reviveScreen.classList.add('hidden');
+                flash.style.opacity = '0';
+                
+                // Cuando termina el destello (300ms despues), iniciamos la imagen y música
+                setTimeout(() => {
+                    flash.style.display = 'none';
+                    
+                    const imgContainer = document.getElementById('reviveImageContainer');
+                    const img = document.getElementById('reviveTransitionImg');
+                    imgContainer.style.display = 'flex';
+                    
+                    audioReviveMusic.currentTime = 210; // Empieza en 3:30
+                    audioReviveMusic.volume = 0;
+                    audioReviveMusic.play().catch(e => console.log(e));
+
+                    // Fade IN de Audio (0.5s)
+                    let fadeIn = setInterval(() => {
+                        if(audioReviveMusic.volume < 0.95) audioReviveMusic.volume = Math.min(1, audioReviveMusic.volume + 0.05);
+                        else clearInterval(fadeIn);
+                    }, 25);
+
+                    // Fade IN de imagen (2s)
+                    img.style.transitionDuration = '2000ms';
+                    void img.offsetWidth;
+                    img.style.opacity = '1';
+
+                    // Tras 3 segundos (2 de fade + 1 estatico), empieza el Fade OUT
+                    setTimeout(() => {
+                        img.style.transitionDuration = '2000ms';
+                        img.style.opacity = '0';
+                        
+                        // Fade OUT de Audio (1.5s)
+                        let fadeOut = setInterval(() => {
+                            if(audioReviveMusic.volume > 0.05) audioReviveMusic.volume = Math.max(0, audioReviveMusic.volume - 0.033);
+                            else {
+                                audioReviveMusic.volume = 0;
+                                audioReviveMusic.pause();
+                                clearInterval(fadeOut);
+                            }
+                        }, 50);
+
+                        // Al terminar el fade out (2s), iniciamos cuenta regresiva 3..2..1
+                        setTimeout(() => {
+                            imgContainer.style.display = 'none';
+                            
+                            const countdownEl = document.getElementById('resumeCountdown');
+                            countdownEl.style.display = 'flex';
+                            countdownEl.textContent = '3';
+                            
+                            setTimeout(() => { countdownEl.textContent = '2'; }, 400);
+                            setTimeout(() => { countdownEl.textContent = '1'; }, 800);
+                            setTimeout(() => { 
+                                countdownEl.style.display = 'none';
+                                resumeGameAfterRevive();
+                            }, 1200); // Fin cuenta regresiva
+                            
+                        }, 2000); // Tiempo fade out imagen
+
+                    }, 3000); // Tiempo espera fade out imagen
+
+                }, 300); // Duración fade out destello
+
+            }, 100); // Duración destello pleno
+        }
+    }
+
+    function resumeGameAfterRevive() {
+        mainUI.style.opacity = '1';
+        monsters = [];
+        globalSpawnTimer = 2000; // 2 segundos de gracia
+        batteryLeft = 100;
+        batteryRight = 100;
+        phoneCenterActive = false;
+        phoneLeftActive = false;
+        phoneRightActive = false;
+
+        if (boss.state === 'WALKING') {
+            boss.progress = Math.max(0, boss.progress - 0.2); 
+        }
+
+        gameState = 'PLAYING';
+        lastTime = performance.now(); 
+        
+        synth.playBGM();
+        windSound.play().catch(e => {});
+        synth.startReelSystem();
+        requestAnimationFrame(gameLoop);
+    }
+
+    function realGameOver() {
+        let scoreToSave = startedFromSurvival ? (timeSurvived - level3StartTime) : timeSurvived;
+        let monedasGanadas = 0;
+        let bonus = 0;
+
+        if (startedFromSurvival) {
+            monedasGanadas = Math.floor(scoreToSave / 3000);
+            bonus = 0; 
+        } else {
+            if (level === 1) {
+                monedasGanadas = Math.floor(timeSurvived / 5000);
+                bonus = 7;
+            } else if (level === 2) {
+                let timeInL1 = level2StartTime;
+                let timeInL2 = timeSurvived - level2StartTime;
+                monedasGanadas = Math.floor(timeInL1 / 5000) + Math.floor(timeInL2 / 4000);
+                bonus = 7 + 18;
+            } else if (level === 3) {
+                let timeInL1 = level2StartTime;
+                let timeInL2 = level3StartTime - level2StartTime;
+                let timeInL3 = timeSurvived - level3StartTime;
+                monedasGanadas = Math.floor(timeInL1 / 5000) + Math.floor(timeInL2 / 4000) + Math.floor(timeInL3 / 3000);
+                bonus = 7 + 18 + 20;
+            }
+        }
+        
+        monedasGanadas += bonus;
+
+        if (scoreToSave > 0) {
+            playerMonedas += monedasGanadas; 
+            updateCoinHUD(); 
+            showCoinGain(monedasGanadas);
+        }
+
+        enviarPuntaje(scoreToSave, monedasGanadas);
 
         gameState = 'GAMEOVER';
         synth.stopBGM();
         windSound.pause();
         synth.stopReelSystem(); 
-        synth.playJumpscare();
+        audioCar.pause();
+        audioChicken.pause();
+        
         mainUI.style.opacity = '0';
         gameOverScreen.classList.remove('hidden');
         
@@ -910,7 +1114,7 @@
             gameOverSubtitle.textContent = "Has sucumbido ante la ráfaga infinita.";
             gameOverBox.className = "bg-gray-800 p-6 rounded-lg mb-6 shadow-lg shadow-purple-900/50 flex flex-col items-center text-center";
             gameOverScoreLabel.textContent = "TIEMPO EN SUPERVIVENCIA";
-            finalScoreDisplay.textContent = formatTime(timeSurvived - level3StartTime);
+            finalScoreDisplay.textContent = formatTime(scoreToSave);
         } else {
             gameOverTitle.textContent = "TE ATRAPÓ";
             gameOverTitle.className = "text-6xl font-bold mb-2 text-red-600 uppercase text-center";
@@ -921,11 +1125,19 @@
             } else {
                 gameOverScoreLabel.textContent = "TIEMPO SOBREVIVIDO";
             }
-            finalScoreDisplay.textContent = formatTime(timeSurvived);
+            finalScoreDisplay.textContent = formatTime(scoreToSave);
         }
         
         drawRoom();
-        drawJumpscare();
+    }
+
+    function showCoinGain(amount) {
+        const addedDisplay = document.getElementById('coinAddedHUD');
+        addedDisplay.textContent = `(+${amount})`;
+        addedDisplay.style.opacity = '1';
+        setTimeout(() => {
+            addedDisplay.style.opacity = '0';
+        }, 4000);
     }
 
     function spawnMonster() {
@@ -1015,7 +1227,7 @@
     }
 
     function gameLoop(timestamp) {
-        if (gameState !== 'PLAYING') return;
+        if (gameState !== 'PLAYING' && gameState !== 'REVIVE_PROMPT' && gameState !== 'REVIVE_TRANSITION') return;
         
         if (lastTime === 0) lastTime = timestamp;
         
@@ -1023,11 +1235,28 @@
         lastTime = timestamp;
         
         update(dt);
-        draw();
+
+        if (gameState === 'PLAYING') {
+            draw();
+        }
+        
         requestAnimationFrame(gameLoop);
     }
 
     function update(dt) {
+        // No hacer logica de avance si estamos en transicion
+        if (gameState === 'REVIVE_TRANSITION') return;
+
+        // --- LOGICA DE PANTALLA DE REVIVIR ---
+        if (gameState === 'REVIVE_PROMPT') {
+            reviveCountdown -= dt / 1000;
+            document.getElementById('reviveTimerDisplay').textContent = Math.max(0, Math.ceil(reviveCountdown));
+            if (reviveCountdown <= 0) {
+                skipRevive();
+            }
+            return; 
+        }
+
         if (victoryAnim.active) {
             victoryAnim.progress += dt / 3000; 
             synth.setReelActive(false); 
@@ -1055,7 +1284,7 @@
                 eventCar.triggered = true;
                 eventCar.active = true;
                 eventCar.timer = 0;
-                audioCar.volume = 0.64; // REDUCIDO 20%
+                audioCar.volume = 0.64; 
                 audioCar.currentTime = 0.3;
                 audioCar.play().catch(e=>console.log(e));
             }
@@ -1063,7 +1292,7 @@
                 eventChicken.triggered = true;
                 eventChicken.active = true;
                 eventChicken.timer = 0;
-                audioChicken.volume = 0.64; // REDUCIDO 20%
+                audioChicken.volume = 0.64; 
                 audioChicken.play().catch(e=>console.log(e));
             }
         }
@@ -1183,7 +1412,6 @@
             boss.hp = 135; 
             boss.maxHp = 135;
             boss.spawnIdx = 3; 
-            synth.playJumpscare();
         }
 
         if (boss.state !== 'NONE' && boss.state !== 'DEFEATED') {
@@ -1199,7 +1427,6 @@
                         lightningFlash = 2.0;
                     }
                     boss.state = 'WALKING';
-                    synth.playJumpscare(); 
                 }
             } else if (boss.state === 'WALKING') {
                 let speed = 20000;
@@ -1237,14 +1464,13 @@
                                 boss.cooldown = 1000; 
                             }
                             boss.progress = 0; 
-                            synth.playJumpscare();
                         } else {
                             boss.state = 'DEFEATED';
                             startVictoryAnimation();
                         }
                     }
                 }
-                if (boss.progress >= 1 && boss.state !== 'DEFEATED') gameOver();
+                if (boss.progress >= 1 && boss.state !== 'DEFEATED') handleDeath();
             }
         }
 
@@ -1305,7 +1531,7 @@
                     anyWarning = true;
                     m.timer -= dt;
                     if (m.timer <= 0) m.state = 'ATTACKING';
-                    if (Math.random() < 0.02) synth.playWarning(m.attackSpeedMult); 
+                    if (Math.random() < 0.02 && synth.playWarning) synth.playWarning(m.attackSpeedMult); 
                     break;
 
                 case 'ATTACKING':
@@ -1316,8 +1542,8 @@
                         const baseAttackSpeed = (dt / 2500);
                         m.progress += baseAttackSpeed * difficulty * m.attackSpeedMult;
                         m.wobble += dt * 0.02 * difficulty;
-                        if (m.progress >= 1) gameOver();
-                        if (Math.random() < 0.1) synth.playAttack(m.attackSpeedMult); 
+                        if (m.progress >= 1) handleDeath();
+                        if (Math.random() < 0.1 && synth.playAttack) synth.playAttack(m.attackSpeedMult); 
                     }
                     break;
 
@@ -1671,23 +1897,6 @@
         }
     }
 
-    function drawJumpscare() {
-        ctx.save(); 
-        ctx.fillStyle = 'rgba(150, 0, 0, 0.4)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(canvas.width/2, canvas.height/2, 250, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#ff0000'; ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 50;
-        ctx.beginPath(); ctx.ellipse(canvas.width/2 - 100, canvas.height/2 - 50, 60, 30, Math.PI*0.1, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(canvas.width/2 + 100, canvas.height/2 - 50, 60, 30, -Math.PI*0.1, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#000'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.beginPath();
-        ctx.moveTo(canvas.width/2 - 150, canvas.height/2 + 100); ctx.lineTo(canvas.width/2 + 150, canvas.height/2 + 100);
-        for(let i=0; i<10; i++) {
-            ctx.lineTo(canvas.width/2 + 150 - (i*30) - 15, canvas.height/2 + 150 + Math.random()*40);
-            ctx.lineTo(canvas.width/2 + 150 - ((i+1)*30), canvas.height/2 + 100);
-        }
-        ctx.stroke(); ctx.fill();
-        ctx.restore(); 
-    }
-
     function drawVignette() {
         const gradient = ctx.createRadialGradient(
             canvas.width/2, canvas.height/2, canvas.height*0.4,
@@ -1781,60 +1990,62 @@
     // --- FUNCIONES DEL MENÚ Y RANKING ---
 
     function iniciarSesion() {
-    const name = playerNameInput.value.trim();
-    const pin = document.getElementById('playerPinInput').value.trim();
-    const errorMsg = document.getElementById('loginError');
+        const name = playerNameInput.value.trim();
+        const pin = document.getElementById('playerPinInput').value.trim();
+        const errorMsg = document.getElementById('loginError');
 
-    if (name === "" || pin === "") {
-        errorMsg.innerText = "¡Ingresa un nombre y un PIN!";
-        errorMsg.classList.remove('hidden');
-        return;
-    }
-
-    const btn = document.getElementById('btnEntrar');
-    btn.innerText = "Conectando...";
-    btn.disabled = true;
-
-    fetch(URL_GOOGLE_SCRIPT, {
-        method: 'POST',
-        body: JSON.stringify({ 
-            action: 'login', 
-            nombre: name, 
-            pin: pin 
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        btn.innerText = "Entrar";
-        btn.disabled = false;
-
-        if (data.status === "success") {
-            playerName = name;
-            playerPin = pin;
-            playerMonedas = data.monedas;
-            
-            errorMsg.classList.add('hidden');
-            loginScreen.classList.add('hidden');
-            startScreen.classList.remove('hidden'); 
-            unlockGlobalAudio();
-        } else {
-            errorMsg.innerText = data.message;
+        if (name === "" || pin === "") {
+            errorMsg.innerText = "¡Ingresa un nombre y un PIN!";
             errorMsg.classList.remove('hidden');
+            return;
         }
-    })
-    .catch(err => {
-        console.error(err);
-        btn.innerText = "Entrar";
-        btn.disabled = false;
-        errorMsg.innerText = "Error de conexión. Intenta de nuevo.";
-        errorMsg.classList.remove('hidden');
-    });
-}
+
+        const btn = document.getElementById('btnEntrar');
+        btn.innerText = "Conectando...";
+        btn.disabled = true;
+
+        fetch(URL_GOOGLE_SCRIPT, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                action: 'login', 
+                nombre: name, 
+                pin: pin 
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.innerText = "Entrar";
+            btn.disabled = false;
+
+            if (data.status === "success") {
+                playerName = name;
+                playerPin = pin;
+                playerMonedas = data.monedas || 0;
+                
+                updateCoinHUD();
+                document.getElementById('coinHUD').classList.remove('hidden');
+
+                errorMsg.classList.add('hidden');
+                loginScreen.classList.add('hidden');
+                startScreen.classList.remove('hidden'); 
+                unlockGlobalAudio();
+            } else {
+                errorMsg.innerText = data.message || "Error al conectar";
+                errorMsg.classList.remove('hidden');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            btn.innerText = "Entrar";
+            btn.disabled = false;
+            errorMsg.innerText = "Error de conexión. Intenta de nuevo.";
+            errorMsg.classList.remove('hidden');
+        });
+    }
 
     function cambiarPestanaRanking(modo) {
         currentRankTab = modo;
         
-        // Actualizar estilos de los botones
         document.getElementById('btnRankNormal').className = modo === 'normal' 
             ? 'px-4 py-2 bg-green-500 text-black font-bold rounded-lg transition' 
             : 'px-4 py-2 bg-gray-700 text-gray-300 font-bold rounded-lg transition hover:bg-gray-600';
@@ -1855,7 +2066,6 @@
             return;
         }
         
-        // Dibujamos el Top 15 del modo seleccionado
         datos.forEach((jugador, index) => {
             let colorNombre = index === 0 ? 'text-yellow-400 text-xl' : 'text-white';
             rankingList.innerHTML += `
@@ -1875,9 +2085,7 @@
         fetch(URL_GOOGLE_SCRIPT)
         .then(res => res.json())
         .then(datos => {
-            // Guardamos la info que viene separada desde el Apps Script
             rankingData = datos;
-            // Dibujamos la pestaña que esté activa (por defecto arranca en 'normal')
             renderRankingList();
         })
         .catch(err => {
@@ -1891,28 +2099,20 @@
         startScreen.classList.remove('hidden');
     }
 
-    function enviarPuntaje() {
-    let scoreToSave = startedFromSurvival ? (timeSurvived - level3StartTime) : timeSurvived;
-    let modoToSave = startedFromSurvival ? 'supervivencia' : 'normal';
-
-    // Conversión: 1 segundo sobrevivido = 1 moneda ganada
-    let monedasGanadas = Math.floor(scoreToSave / 1000); 
-
-    if (scoreToSave > 0) {
-        playerMonedas += monedasGanadas; // Actualizamos la billetera local al instante
-
+    function enviarPuntaje(score, coins) {
+        let modoToSave = startedFromSurvival ? 'supervivencia' : 'normal';
+        
         fetch(URL_GOOGLE_SCRIPT, {
             method: 'POST',
             body: JSON.stringify({ 
                 action: 'saveScore',
                 nombre: playerName, 
-                puntaje: scoreToSave,
+                puntaje: score,
                 modo: modoToSave,
-                monedasGanadas: monedasGanadas
+                monedasGanadas: coins
             }) 
-        }).catch(err => console.error("Error al guardar puntaje y monedas:", err));
+        }).catch(err => console.error("Error al guardar puntaje:", err));
     }
-}
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
