@@ -237,7 +237,7 @@
     <!-- Cuenta regresiva (3..2..1) -->
     <div id="resumeCountdown" class="absolute inset-0 flex justify-center items-center text-[15rem] text-white font-bold z-[85] pointer-events-none drop-shadow-[0_0_30px_rgba(255,255,255,0.8)]" style="display: none;"></div>
 
-    <!-- Contador de Monedas Global (visible casi siempre post-login) -->
+    <!-- Contador de Monedas Global -->
     <div id="coinHUD" class="absolute top-4 right-4 text-xl font-bold text-yellow-400 bg-gray-900/90 px-4 py-2 rounded-xl border border-yellow-600 shadow-lg shadow-yellow-900/30 z-[70] hidden pointer-events-auto flex items-center gap-2">
         <span>🪙</span> 
         <span id="coinTotalHUD">0</span>
@@ -388,14 +388,23 @@
 
     const imgChicken = new Image(); imgChicken.src = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTyQ3bP1PZlL3pL6xXOkLoRDqWHryvokaboDg&s";
     
+    // --- IMAGEN EVENTO TV (NIVEL 2) ---
+    const imgTvEvent = new Image(); 
+    imgTvEvent.src = "https://github.com/LucasTiri/Noche-de-Reels-y-Gordos/blob/main/Captura%20de%20pantalla%202026-02-27%20120921.png?raw=true";
+
+    // --- AUDIOS ---
     const audioCar = new Audio('https://www.myinstants.com/media/sounds/oye-gela-escuchate-esto-saturado.mp3');
     audioCar.preload = 'auto';
     const audioChicken = new Audio('https://www.myinstants.com/media/sounds/chicken-on-tree-screaming.mp3');
     audioChicken.preload = 'auto';
     
-    // --- AUDIO PARA TRANSICIÓN DE REVIVIR ---
+    // Audio para Transición de Revivir
     const audioReviveMusic = new Audio("https://github.com/LucasTiri/Noche-de-Reels-y-Gordos/raw/refs/heads/main/BLANCA%20-%20La%20Bondad%20de%20Dios_%20Video%20de%20Letras%20Oficial.mp3");
     audioReviveMusic.preload = 'auto';
+
+    // Audio para Evento TV Nivel 2
+    const audioTvEvent = new Audio("https://github.com/LucasTiri/Noche-de-Reels-y-Gordos/raw/refs/heads/main/Se%20termin%C3%B3%20la%20espera%20%20La%20Historia%20de%20Camila%20ser%C3%A1%20mi%20primer%20canci%C3%B3n%20del%202026.mp3");
+    audioTvEvent.preload = 'auto';
 
     const monsterImagesArray = [
         imgMonster1, imgMonster2, imgMonster3, imgMonster4, imgMonster5, 
@@ -429,6 +438,7 @@
     const reviveScreen = document.getElementById('reviveScreen');
     const gameOverScreen = document.getElementById('gameOverScreen');
     const mainUI = document.getElementById('mainUI');
+    const coinHUD = document.getElementById('coinHUD');
     
     const timerDisplay = document.getElementById('timerDisplay');
     const survivalTimerDisplay = document.getElementById('survivalTimerDisplay');
@@ -456,6 +466,7 @@
     // --- SISTEMA DE REELS ---
     const MASTER_REEL_VOLUME = 1.0; 
     const reelSoundsPaths = [
+        "https://github.com/LucasTiri/Noche-de-Reels-y-Gordos/raw/refs/heads/main/mp3-000-1000326130.mp3",
         "https://www.myinstants.com/media/sounds/lingan-guli-wacha.mp3",
         "https://www.myinstants.com/media/sounds/salesman-squid-game-edit-audio-blah-phonk.mp3",
         "https://www.myinstants.com/media/sounds/all-goofy-sounds.mp3",
@@ -560,19 +571,6 @@
             setTimeout(() => this.playTone(554, 'triangle', 0.15, 0.4), 150); 
             setTimeout(() => this.playTone(659, 'triangle', 0.15, 0.4), 300); 
             setTimeout(() => this.playTone(880, 'triangle', 0.5, 0.5), 450); 
-        },
-        playWarning: function(speedMult) {
-            if (!audioCtx) return;
-            const osc1 = audioCtx.createOscillator(); const osc2 = audioCtx.createOscillator();
-            const gain = audioCtx.createGain(); const baseFreq = 200 + (speedMult * 400); 
-            osc1.type = 'sawtooth'; osc2.type = 'triangle'; const detune = 20 + Math.random() * 60;
-            osc1.frequency.setValueAtTime(baseFreq, audioCtx.currentTime); osc2.frequency.setValueAtTime(baseFreq + detune, audioCtx.currentTime);
-            osc1.frequency.exponentialRampToValueAtTime(baseFreq * 0.7, audioCtx.currentTime + 0.4);
-            osc2.frequency.exponentialRampToValueAtTime((baseFreq + detune) * 0.7, audioCtx.currentTime + 0.4);
-            gain.gain.setValueAtTime(0, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.05); 
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4); 
-            osc1.connect(gain); osc2.connect(gain); gain.connect(audioCtx.destination);
-            osc1.start(); osc2.start(); osc1.stop(audioCtx.currentTime + 0.4); osc2.stop(audioCtx.currentTime + 0.4);
         }
     };
 
@@ -590,7 +588,7 @@
         }
         if (audioCtx.state === 'suspended') audioCtx.resume();
 
-        const allAudios = [...reelAudios, audioCar, audioChicken, windSound, audioReviveMusic];
+        const allAudios = [...reelAudios, audioCar, audioChicken, windSound, audioReviveMusic, audioTvEvent];
         allAudios.forEach(a => {
             a.muted = true; 
             let p = a.play();
@@ -634,6 +632,7 @@
     // --- EVENTOS DE FONDO ---
     let eventCar = { triggered: false, active: false, timer: 0 };
     let eventChicken = { triggered: false, active: false, timer: 0 };
+    let eventTv = { triggered: false, active: false, timer: 0 };
 
     let boss = {
         state: 'NONE', 
@@ -692,6 +691,7 @@
         gameOverScreen.classList.add('hidden');
         mainUI.style.opacity = '0';
         gameState = 'MENU';
+        coinHUD.classList.remove('hidden');
         
         timerDisplay.classList.remove('hidden');
         survivalTimerDisplay.classList.add('hidden');
@@ -699,13 +699,16 @@
 
         audioCar.pause(); audioCar.currentTime = 0;
         audioChicken.pause(); audioChicken.currentTime = 0;
+        audioTvEvent.pause(); audioTvEvent.currentTime = 0;
         eventCar.active = false;
         eventChicken.active = false;
+        eventTv.active = false;
     }
 
     function startGame() {
         startScreen.classList.add('hidden');
         mainUI.style.opacity = '1';
+        coinHUD.classList.add('hidden'); // Ocultar al jugar
         rightBatteryWrapper.classList.add('hidden');
         leftBatteryWrapper.querySelector('.text-xs').textContent = "BATERÍA TELÉFONO";
         
@@ -731,8 +734,10 @@
 
         audioCar.pause(); audioCar.currentTime = 0;
         audioChicken.pause(); audioChicken.currentTime = 0;
+        audioTvEvent.pause(); audioTvEvent.currentTime = 0;
         eventCar = { triggered: false, active: false, timer: 0 };
         eventChicken = { triggered: false, active: false, timer: 0 };
+        eventTv = { triggered: false, active: false, timer: 0 };
 
         boss = { state: 'NONE', timer: 10000, progress: 0, wobble: 0, hp: 50, maxHp: 50, phase: 1, spawnIdx: 3, cooldown: 0 };
         victoryAnim = { active: false, progress: 0 };
@@ -757,6 +762,7 @@
     function testLevel3() {
         startScreen.classList.add('hidden');
         mainUI.style.opacity = '1';
+        coinHUD.classList.add('hidden'); // Ocultar al jugar
         rightBatteryWrapper.classList.remove('hidden');
         leftBatteryWrapper.querySelector('.text-xs').textContent = "BATERÍA IZQ.";
         
@@ -780,6 +786,7 @@
         
         eventCar.triggered = true; 
         eventChicken.triggered = true;
+        eventTv.triggered = true;
 
         boss = { state: 'DEFEATED', timer: 10000, progress: 0, wobble: 0, hp: 50, maxHp: 50, phase: 1, spawnIdx: 3, cooldown: 0 };
         victoryAnim = { active: false, progress: 0 };
@@ -824,6 +831,7 @@
         synth.stopBGM(); 
         synth.stopReelSystem(); 
         mainUI.style.opacity = '0';
+        coinHUD.classList.remove('hidden'); // Mostrar en transicion
         level2Screen.classList.remove('hidden');
         
         monsters = [];
@@ -832,6 +840,7 @@
     function startLevel2() {
         level2Screen.classList.add('hidden');
         mainUI.style.opacity = '1';
+        coinHUD.classList.add('hidden'); // Ocultar al jugar
         
         rightBatteryWrapper.classList.remove('hidden');
         leftBatteryWrapper.querySelector('.text-xs').textContent = "BATERÍA IZQ.";
@@ -844,6 +853,10 @@
         consecutiveSideCount = 0;
         
         renderLevelStars(level); 
+
+        // Reset TV event trigger for Level 2
+        eventTv = { triggered: false, active: false, timer: 0 };
+        audioTvEvent.pause(); audioTvEvent.currentTime = 0;
 
         boss = { state: 'NONE', timer: 10000, progress: 0, wobble: 0, hp: 50, maxHp: 50, phase: 1, spawnIdx: 3, cooldown: 0 };
         
@@ -867,6 +880,7 @@
         synth.stopBGM(); 
         synth.stopReelSystem(); 
         mainUI.style.opacity = '0';
+        coinHUD.classList.remove('hidden'); // Mostrar en transicion
         level3Screen.classList.remove('hidden');
         
         monsters = [];
@@ -875,6 +889,7 @@
     function startLevel3() {
         level3Screen.classList.add('hidden');
         mainUI.style.opacity = '1';
+        coinHUD.classList.add('hidden'); // Ocultar al jugar
         
         rightBatteryWrapper.classList.remove('hidden');
         leftBatteryWrapper.querySelector('.text-xs').textContent = "BATERÍA IZQ.";
@@ -925,6 +940,7 @@
             }
 
             mainUI.style.opacity = '0';
+            coinHUD.classList.remove('hidden'); // Mostrar HUD al decidir
             reviveScreen.classList.remove('hidden');
 
             // Pausa audios
@@ -933,6 +949,7 @@
             synth.stopReelSystem(); 
             audioCar.pause();
             audioChicken.pause();
+            audioTvEvent.pause();
 
             drawRoom();
         } else {
@@ -965,6 +982,7 @@
 
             // Transición Épica
             gameState = 'REVIVE_TRANSITION';
+            coinHUD.classList.add('hidden');
             
             const flash = document.getElementById('whiteFlash');
             flash.style.display = 'block';
@@ -1104,8 +1122,10 @@
         synth.stopReelSystem(); 
         audioCar.pause();
         audioChicken.pause();
+        audioTvEvent.pause();
         
         mainUI.style.opacity = '0';
+        coinHUD.classList.remove('hidden'); // Mostrar HUD al morir
         gameOverScreen.classList.remove('hidden');
         
         if (startedFromSurvival) {
@@ -1296,6 +1316,18 @@
                 audioChicken.play().catch(e=>console.log(e));
             }
         }
+        
+        // Evento Nivel 2: Imagen y Cancion en la TV a los 15 segs
+        if (level === 2) {
+            if (lvl2Elapsed >= 15000 && !eventTv.triggered) {
+                eventTv.triggered = true;
+                eventTv.active = true;
+                eventTv.timer = 0;
+                audioTvEvent.currentTime = 0;
+                audioTvEvent.volume = 0;
+                audioTvEvent.play().catch(e=>console.log(e));
+            }
+        }
 
         if (eventCar.active) {
             eventCar.timer += dt;
@@ -1304,6 +1336,21 @@
         if (eventChicken.active) {
             eventChicken.timer += dt;
             if (eventChicken.timer > 5000) eventChicken.active = false; 
+        }
+        if (eventTv.active) {
+            eventTv.timer += dt;
+            // Manejo del volumen del audio de TV (fade in 1.2s y fade out 1.2s, total 4s)
+            let alpha = 0;
+            if (eventTv.timer <= 1200) alpha = eventTv.timer / 1200;
+            else if (eventTv.timer <= 2800) alpha = 1.0;
+            else if (eventTv.timer <= 4000) alpha = 1.0 - ((eventTv.timer - 2800) / 1200);
+            
+            audioTvEvent.volume = Math.max(0, Math.min(1, alpha)) * 0.8; // Max volumen 0.8
+
+            if (eventTv.timer > 4000) {
+                eventTv.active = false;
+                audioTvEvent.pause();
+            }
         }
 
         let showPreBossWarning = false;
@@ -1531,7 +1578,6 @@
                     anyWarning = true;
                     m.timer -= dt;
                     if (m.timer <= 0) m.state = 'ATTACKING';
-                    if (Math.random() < 0.02 && synth.playWarning) synth.playWarning(m.attackSpeedMult); 
                     break;
 
                 case 'ATTACKING':
@@ -1543,7 +1589,6 @@
                         m.progress += baseAttackSpeed * difficulty * m.attackSpeedMult;
                         m.wobble += dt * 0.02 * difficulty;
                         if (m.progress >= 1) handleDeath();
-                        if (Math.random() < 0.1 && synth.playAttack) synth.playAttack(m.attackSpeedMult); 
                     }
                     break;
 
@@ -1729,6 +1774,24 @@
         
         ctx.fillStyle = '#1a1a24'; ctx.fillRect(20, 570, 90, 60); 
         ctx.fillStyle = '#050508'; ctx.fillRect(25, 575, 80, 50);
+
+        // --- DIBUJO DEL EVENTO DE LA TV ---
+        if (eventTv.active) {
+            let t = eventTv.timer;
+            let alpha = 0;
+            if (t <= 1200) alpha = t / 1200; // Fade in
+            else if (t <= 2800) alpha = 1.0; // Se mantiene
+            else if (t <= 4000) alpha = 1.0 - ((t - 2800) / 1200); // Fade out
+            
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+            if (imgTvEvent.complete && imgTvEvent.naturalWidth > 0) {
+                // Dibujamos la imagen exactamente adentro de la pantalla (x:25, y:575, w:80, h:50)
+                ctx.drawImage(imgTvEvent, 25, 575, 80, 50);
+            }
+            ctx.restore();
+        }
+
         ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.strokeRect(20, 570, 90, 60);
         ctx.fillStyle = '#ff0000'; ctx.beginPath(); ctx.arc(100, 625, 2, 0, Math.PI*2); ctx.fill();
         
