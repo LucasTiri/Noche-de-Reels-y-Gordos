@@ -360,8 +360,11 @@
     const imgChicken = new Image();
     imgChicken.src = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTyQ3bP1PZlL3pL6xXOkLoRDqWHryvokaboDg&s";
     
+    // IMPORTANTE: preload = 'auto' necesario en iOS para controlar currentTime antes de darle Play
     const audioCar = new Audio('https://www.myinstants.com/media/sounds/oye-gela-escuchate-esto-saturado.mp3');
+    audioCar.preload = 'auto';
     const audioChicken = new Audio('https://www.myinstants.com/media/sounds/chicken-on-tree-screaming.mp3');
+    audioChicken.preload = 'auto';
 
     const monsterImagesArray = [
         imgMonster1, imgMonster2, imgMonster3, imgMonster4, imgMonster5, 
@@ -407,6 +410,7 @@
     const windSound = new Audio('https://actions.google.com/sounds/v1/horror/hallow_wind.ogg');
     windSound.loop = true;      
     windSound.volume = 0.9;    
+    windSound.preload = 'auto';
 
     // --- NUEVO SISTEMA DE REELS ---
     const MASTER_REEL_VOLUME = 1.0; 
@@ -437,6 +441,7 @@
 
     reelSoundsPaths.forEach((path) => {
         let a = new Audio(path);
+        a.preload = 'auto'; // Importante para iOS
         a.volume = REEL_BASE_VOL;
         a.addEventListener('ended', () => {
             a.currentTime = 0;
@@ -545,6 +550,42 @@
     };
 
     synth.preload();
+
+    // --- DESBLOQUEO DE AUDIO PARA IOS (IPHONE) ---
+    // iOS bloquea cualquier cambio de volumen o reproducción si no se hace en el mismo click.
+    let iosAudioUnlocked = false;
+    function unlockGlobalAudio() {
+        if (iosAudioUnlocked) return;
+        
+        if (!audioCtx) {
+            audioCtx = new AudioContext();
+            synth.awakeOsc = audioCtx.createOscillator();
+            const awakeGain = audioCtx.createGain(); awakeGain.gain.value = 0.0001; 
+            synth.awakeOsc.connect(awakeGain); awakeGain.connect(audioCtx.destination); synth.awakeOsc.start();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        // Reproducir y pausar rápidamente todos los audios en silencio ("cebar" la pista)
+        const allAudios = [...reelAudios, audioCar, audioChicken, windSound];
+        allAudios.forEach(a => {
+            a.muted = true; // Que el jugador no lo escuche
+            let p = a.play();
+            if (p !== undefined) {
+                p.then(() => {
+                    a.pause();
+                    a.currentTime = 0;
+                    a.muted = false; // Lo desmuteamos para cuando deba sonar de verdad
+                }).catch(() => {
+                    a.muted = false;
+                });
+            }
+        });
+        iosAudioUnlocked = true;
+    }
+
+    // Escuchar el primer toque en la pantalla para desbloquear todo
+    document.addEventListener('touchstart', unlockGlobalAudio, {once: true});
+    document.addEventListener('mousedown', unlockGlobalAudio, {once: true});
 
     // Estado del juego
     let gameState = 'MENU'; 
@@ -998,7 +1039,7 @@
                 eventCar.triggered = true;
                 eventCar.active = true;
                 eventCar.timer = 0;
-                audioCar.volume = 0.8; 
+                audioCar.volume = 0.64; // REDUCIDO 20%
                 audioCar.currentTime = 0.3;
                 audioCar.play().catch(e=>console.log(e));
             }
@@ -1006,7 +1047,7 @@
                 eventChicken.triggered = true;
                 eventChicken.active = true;
                 eventChicken.timer = 0;
-                audioChicken.volume = 0.8; 
+                audioChicken.volume = 0.64; // REDUCIDO 20%
                 audioChicken.play().catch(e=>console.log(e));
             }
         }
@@ -1672,7 +1713,6 @@
     }
 
     function handleKeyDown(e) {
-        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
         if (gameState !== 'PLAYING') return;
         
         if (level === 1 && (e.code === 'Space' || e.code === 'ArrowLeft' || e.code === 'ArrowRight')) {
@@ -1694,7 +1734,6 @@
     }
     
     window.addEventListener('mousedown', (e) => {
-        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
         if (gameState !== 'PLAYING') return;
         updateTouches([{clientX: e.clientX}]); 
     });
@@ -1704,7 +1743,6 @@
     });
 
     window.addEventListener('touchstart', (e) => {
-        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
         if (gameState !== 'PLAYING') return;
         updateTouches(e.touches);
     }, {passive: false});
@@ -1735,6 +1773,7 @@
         playerName = name;
         loginScreen.classList.add('hidden');
         startScreen.classList.remove('hidden'); 
+        unlockGlobalAudio(); // Asegurar que el audio se desbloquee al entrar
     }
 
     function cambiarPestanaRanking(modo) {
