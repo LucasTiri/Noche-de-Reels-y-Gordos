@@ -94,6 +94,13 @@
         .btn-purple:hover:not(:disabled) {
             background-color: #9333ea;
         }
+        .btn-red {
+            background-color: #ef4444;
+            color: white;
+        }
+        .btn-red:hover:not(:disabled) {
+            background-color: #dc2626;
+        }
         #hud {
             padding: 20px;
             display: flex;
@@ -231,17 +238,19 @@
 
     <!-- Transición de Imagen Revivir -->
     <div id="reviveImageContainer" class="fixed inset-0 z-[90] flex justify-center items-center pointer-events-none" style="display: none;">
-        <img id="reviveTransitionImg" src="https://github.com/LucasTiri/Noche-de-Reels-y-Gordos/blob/main/IMG-20260122-WA0078(1)(1).png?raw=true" class="max-w-[80%] max-h-[80%] opacity-0" style="transition-property: opacity; transition-duration: 2000ms;">
+        <img id="reviveTransitionImg" src="https://cdn.jsdelivr.net/gh/LucasTiri/Noche-de-Reels-y-Gordos@main/IMG-20260122-WA0078(1)(1).png" class="max-w-[80%] max-h-[80%] opacity-0" style="transition-property: opacity; transition-duration: 2000ms;">
     </div>
 
     <!-- Cuenta regresiva (3..2..1) -->
     <div id="resumeCountdown" class="absolute inset-0 flex justify-center items-center text-[15rem] text-white font-bold z-[85] pointer-events-none drop-shadow-[0_0_30px_rgba(255,255,255,0.8)]" style="display: none;"></div>
 
-    <!-- Contador de Monedas Global -->
-    <div id="coinHUD" class="absolute top-4 right-4 text-xl font-bold text-yellow-400 bg-gray-900/90 px-4 py-2 rounded-xl border border-yellow-600 shadow-lg shadow-yellow-900/30 z-[70] hidden pointer-events-auto flex items-center gap-2">
-        <span>🪙</span> 
-        <span id="coinTotalHUD">0</span>
-        <span id="coinAddedHUD" class="text-green-400 text-base ml-1 opacity-0 transition-opacity duration-300 font-mono"></span>
+    <!-- Contador de Monedas Global (visible casi siempre post-login) -->
+    <div id="coinHUDWrapper" class="absolute top-4 right-4 z-[70] hidden pointer-events-auto flex items-center gap-2">
+        <span id="coinAddedHUD" class="text-green-400 text-lg font-mono opacity-0 transition-opacity duration-300 drop-shadow-md"></span>
+        <div class="text-xl font-bold text-yellow-400 bg-gray-900/90 px-3 py-1.5 rounded-xl border border-yellow-600 shadow-lg shadow-yellow-900/30 flex items-center gap-2">
+            <span>🪙</span> 
+            <span id="coinTotalHUD">0</span>
+        </div>
     </div>
 
     <div class="ui-layer" id="mainUI" style="opacity: 0;">
@@ -274,8 +283,47 @@
         <input type="text" id="playerNameInput" placeholder="Tu nombre..." class="px-4 py-3 text-xl text-black rounded-lg mb-4 text-center font-bold outline-none border-4 border-transparent focus:border-green-400" maxlength="12" autocomplete="off">
         <input type="password" id="playerPinInput" placeholder="Tu PIN secreto..." class="px-4 py-3 text-xl text-black rounded-lg mb-6 text-center font-bold outline-none border-4 border-transparent focus:border-green-400" maxlength="4" autocomplete="off">
     
-        <button id="btnEntrar" class="btn w-[280px] py-4 text-xl" onclick="iniciarSesion()">Entrar</button>
+        <button id="btnEntrar" class="btn w-[280px] h-[64px] text-xl" onclick="iniciarSesion()">Entrar</button>
         <p id="loginError" class="text-red-500 mt-4 font-bold hidden">Error</p>
+    </div>
+
+    <!-- PANTALLA DE TIENDA -->
+    <div id="storeScreen" class="screen hidden z-[60]">
+        <h1 class="text-5xl font-bold mb-6 text-blue-400">Tienda</h1>
+        <div class="text-2xl font-bold text-yellow-400 mb-6 bg-gray-900/80 px-6 py-2 rounded-xl border border-yellow-600">
+            🪙 Mis Monedas: <span id="storeCoinTotal">0</span>
+        </div>
+        
+        <div id="storeList" class="bg-gray-800 p-4 rounded-lg mb-6 w-80 max-w-[90vw] max-h-[50vh] overflow-y-auto flex flex-col gap-4 shadow-lg custom-scrollbar">
+            <!-- Producto: Pack de Imágenes -->
+            <div class="bg-gray-700 rounded-lg p-4 flex flex-col items-center text-center relative border border-gray-600">
+                <div class="absolute top-2 right-2 bg-blue-900 text-blue-200 text-xs font-bold px-2 py-1 rounded">Nvl. Máx</div>
+                <div class="w-24 h-24 bg-gray-900 rounded-md mb-3 flex justify-center items-center overflow-hidden border border-gray-500">
+                    <span class="text-5xl">🖼️</span>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-1">Pack de Imágenes</h3>
+                <p class="text-sm text-gray-300 mb-4 h-10">Desbloquea monstruos raros para la noche.</p>
+                <button id="btnBuyImgPack" class="btn !m-0 w-full flex flex-col items-center py-2" onclick="handleImgPackClick()">
+                    <span id="imgPackActionText">Comprar</span>
+                    <span id="imgPackPriceText" class="text-sm">500 🪙</span>
+                </button>
+            </div>
+
+            <!-- Producto: Habitación de Madera -->
+            <div class="bg-gray-700 rounded-lg p-4 flex flex-col items-center text-center relative border border-gray-600">
+                <div class="absolute top-2 right-2 bg-yellow-900 text-yellow-200 text-xs font-bold px-2 py-1 rounded">Cosmético</div>
+                <div class="w-24 h-24 bg-amber-900 rounded-md mb-3 flex justify-center items-center overflow-hidden border border-amber-700">
+                    <span class="text-5xl">🛏️</span>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-1">Cabaña Rústica</h3>
+                <p class="text-sm text-gray-300 mb-4 h-10">Renueva tu habitación con madera y una cama mejor.</p>
+                <button id="btnBuyWoodRoom" class="btn !m-0 w-full flex flex-col items-center py-2" onclick="handleWoodRoomClick()">
+                    <span id="woodRoomActionText">Comprar</span>
+                    <span id="woodRoomPriceText" class="text-sm">750 🪙</span>
+                </button>
+            </div>
+        </div>
+        <button class="btn px-8 py-3 text-lg mt-0" onclick="hideStore()">Volver</button>
     </div>
 
     <!-- PANTALLA DE RANKING -->
@@ -304,6 +352,7 @@
         <div class="flex flex-col gap-4 items-center w-full max-w-sm">
             <button class="btn !m-0 w-[280px] h-[64px] text-xl" onclick="startGame()">Comenzar Nivel 1</button>
             <button class="btn btn-purple !m-0 w-[280px] h-[64px] text-xl" onclick="testLevel3()">Modo Supervivencia</button>
+            <button class="btn !bg-blue-600 !text-white !m-0 w-[280px] h-[64px] text-xl" onclick="showStore()">🛒 Tienda</button>
         </div>
         
         <div class="mt-10 flex flex-col gap-4 items-center w-full max-w-sm">
@@ -335,7 +384,7 @@
 
     <!-- PANTALLA INTERMEDIA DE REVIVIR -->
     <div id="reviveScreen" class="screen hidden bg-black/95 z-[65]">
-        <button onclick="skipRevive()" class="absolute top-6 right-6 text-white text-5xl font-bold opacity-70 hover:opacity-100 transition-opacity">&times;</button>
+        <button onclick="skipRevive()" class="absolute top-6 left-6 text-white text-5xl font-bold opacity-70 hover:opacity-100 transition-opacity">&times;</button>
         <h2 class="text-5xl font-bold text-blue-400 mb-10 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]">¿UNA OPORTUNIDAD MÁS?</h2>
         
         <div class="text-8xl font-mono text-red-500 mb-10 font-bold" id="reviveTimerDisplay">5</div>
@@ -363,34 +412,70 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
+    // Función auxiliar para crear imágenes fácil
+    function crearImagen(src) {
+        let img = new Image();
+        img.crossOrigin = "anonymous"; 
+        img.src = src;
+        return img;
+    }
+
 // --- IMÁGENES ---
     const imgLevelStarSrc = "https://i.postimg.cc/cHjz4Zqd/20260125-152321(1)(1).png"; 
-    const imgPlayer = new Image(); imgPlayer.src = "https://i.postimg.cc/XqKdNbm2/IMG-20260225-WA0043(1).png"; 
-    const imgPlayerLit = new Image(); imgPlayerLit.src = "https://i.postimg.cc/hv8T4B68/1772063833308.png";
-    const imgBoss1 = new Image(); imgBoss1.src = "https://i.postimg.cc/wM5LxpZh/Screenshot-20260225-210932-Gallery.png";
-    const imgBoss2Ph1 = new Image(); imgBoss2Ph1.src = "https://i.postimg.cc/j5jrGWZD/Screenshot-20260226-122551-Gallery.png";
-    const imgBoss2Ph2 = new Image(); imgBoss2Ph2.src = "https://i.postimg.cc/tgQ8F97q/Screenshot-20260226-123607-Gallery.png";
+    const imgPlayer = crearImagen("https://i.postimg.cc/XqKdNbm2/IMG-20260225-WA0043(1).png"); 
+    const imgPlayerLit = crearImagen("https://i.postimg.cc/hv8T4B68/1772063833308.png");
+    const imgBoss1 = crearImagen("https://i.postimg.cc/wM5LxpZh/Screenshot-20260225-210932-Gallery.png");
+    const imgBoss2Ph1 = crearImagen("https://i.postimg.cc/j5jrGWZD/Screenshot-20260226-122551-Gallery.png");
+    const imgBoss2Ph2 = crearImagen("https://i.postimg.cc/tgQ8F97q/Screenshot-20260226-123607-Gallery.png");
 
-    const imgMonster1 = new Image(); imgMonster1.src = "https://i.postimg.cc/prQzVH4k/20260214-005650(1).png";
-    const imgMonster2 = new Image(); imgMonster2.src = "https://i.postimg.cc/x8GMj2h6/IMG-20260127-WA0238.png";
-    const imgMonster3 = new Image(); imgMonster3.src = "https://i.postimg.cc/WzmgpvCX/IMG-20260127-WA0318.png";
-    const imgMonster4 = new Image(); imgMonster4.src = "https://i.postimg.cc/L5kL4pwV/IMG-20260214-WA0005(1).png";
-    const imgMonster5 = new Image(); imgMonster5.src = "https://i.postimg.cc/L5kL4pwf/IMG-20260225-WA0088.png";
-    const imgMonster6 = new Image(); imgMonster6.src = "https://i.postimg.cc/mk3CZsJ6/Screenshot-20260225-174400-Photos.png";
-    const imgMonster7 = new Image(); imgMonster7.src = "https://i.postimg.cc/kGNKMmz1/Screenshot-20260225-174612-Gallery.png";
-    const imgMonster8 = new Image(); imgMonster8.src = "https://i.postimg.cc/90PZXhKp/Screenshot-20260225-193552-Intent-Resolver.png";
-    const imgMonster9 = new Image(); imgMonster9.src = "https://i.postimg.cc/3NjmrTVC/Screenshot-20260225-202605-Whats-App(1).png";
-    const imgMonster10 = new Image(); imgMonster10.src = "https://i.postimg.cc/SRLCQh3C/Screenshot-20260225-210912-Gallery(1).png";
-    const imgMonster11 = new Image(); imgMonster11.src = "https://i.postimg.cc/C5CkMgXG/Screenshot-20260225-211200-Gallery.png";
-    const imgMonster12 = new Image(); imgMonster12.src = "https://i.postimg.cc/D0QLfTH1/Screenshot-20260225-211848-Photos.png";
-    const imgMonster13 = new Image(); imgMonster13.src = "https://i.postimg.cc/NF8mGcSH/Screenshot-20260225-215552-One-UI-Home.png";
-    const imgVictory = new Image(); imgVictory.src = "https://i.postimg.cc/MTm1GmfV/20260125-152321.png";
+    const imgMonster1 = crearImagen("https://i.postimg.cc/prQzVH4k/20260214-005650(1).png");
+    const imgMonster2 = crearImagen("https://i.postimg.cc/x8GMj2h6/IMG-20260127-WA0238.png");
+    const imgMonster3 = crearImagen("https://i.postimg.cc/WzmgpvCX/IMG-20260127-WA0318.png");
+    const imgMonster4 = crearImagen("https://i.postimg.cc/L5kL4pwV/IMG-20260214-WA0005(1).png");
+    const imgMonster5 = crearImagen("https://i.postimg.cc/L5kL4pwf/IMG-20260225-WA0088.png");
+    const imgMonster6 = crearImagen("https://i.postimg.cc/mk3CZsJ6/Screenshot-20260225-174400-Photos.png");
+    const imgMonster7 = crearImagen("https://i.postimg.cc/kGNKMmz1/Screenshot-20260225-174612-Gallery.png");
+    const imgMonster8 = crearImagen("https://i.postimg.cc/90PZXhKp/Screenshot-20260225-193552-Intent-Resolver.png");
+    const imgMonster9 = crearImagen("https://i.postimg.cc/3NjmrTVC/Screenshot-20260225-202605-Whats-App(1).png");
+    const imgMonster10 = crearImagen("https://i.postimg.cc/SRLCQh3C/Screenshot-20260225-210912-Gallery(1).png");
+    const imgMonster11 = crearImagen("https://i.postimg.cc/C5CkMgXG/Screenshot-20260225-211200-Gallery.png");
+    const imgMonster12 = crearImagen("https://i.postimg.cc/D0QLfTH1/Screenshot-20260225-211848-Photos.png");
+    const imgMonster13 = crearImagen("https://i.postimg.cc/NF8mGcSH/Screenshot-20260225-215552-One-UI-Home.png");
+    const imgVictory = crearImagen("https://i.postimg.cc/MTm1GmfV/20260125-152321.png");
 
-    const imgChicken = new Image(); imgChicken.src = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTyQ3bP1PZlL3pL6xXOkLoRDqWHryvokaboDg&s";
+    const imgChicken = crearImagen("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTyQ3bP1PZlL3pL6xXOkLoRDqWHryvokaboDg&s");
     
     // --- IMAGEN EVENTO TV (NIVEL 2) ---
-    const imgTvEvent = new Image(); 
-    imgTvEvent.src = "https://github.com/LucasTiri/Noche-de-Reels-y-Gordos/blob/main/Captura%20de%20pantalla%202026-02-27%20120921.png?raw=true";
+    const imgTvEvent = crearImagen("https://cdn.jsdelivr.net/gh/LucasTiri/Noche-de-Reels-y-Gordos@main/Captura%20de%20pantalla%202026-02-27%20120921.png");
+
+    // --- NUEVAS IMÁGENES PLACEHOLDER (TELEVISOR Y PUERTA/ARMARIO) ---
+    const imgTvPlaceholder = crearImagen("https://static.vecteezy.com/system/resources/thumbnails/038/015/883/small/ai-generated-modern-tv-isolated-on-transparent-background-free-png.png");
+    const imgDoorPlaceholder = crearImagen("https://github.com/LucasTiri/Noche-de-Reels-y-Gordos/blob/main/Obertura-puerta-Derecha.png?raw=true");
+
+    // ==========================================
+    // 📥 CARGA AQUÍ LAS IMÁGENES DEL PACK COMPRADO
+    // ==========================================
+    const packMonsterImagesArray = [
+        // EJEMPLO: crearImagen("https://tusitio.com/monstruo_nuevo1.png"),
+    ];
+
+    const baseMonsterImagesArray = [
+        imgMonster1, imgMonster2, imgMonster3, imgMonster4, imgMonster5, 
+        imgMonster6, imgMonster7, imgMonster8, imgMonster9, imgMonster10, 
+        imgMonster11, imgMonster12, imgMonster13
+    ];
+    
+    // Array dinámico que usa el juego
+    let monsterImagesArray = [...baseMonsterImagesArray];
+
+    function updateMonsterArray() {
+        if (hasImagePack && imagePackEquipped) {
+            let validPackImgs = packMonsterImagesArray.filter(img => img.src && img.src !== "" && img.src !== window.location.href);
+            monsterImagesArray = baseMonsterImagesArray.concat(validPackImgs);
+        } else {
+            monsterImagesArray = [...baseMonsterImagesArray];
+        }
+    }
 
     // --- AUDIOS ---
     const audioCar = new Audio('https://www.myinstants.com/media/sounds/oye-gela-escuchate-esto-saturado.mp3');
@@ -399,18 +484,13 @@
     audioChicken.preload = 'auto';
     
     // Audio para Transición de Revivir
-    const audioReviveMusic = new Audio("https://github.com/LucasTiri/Noche-de-Reels-y-Gordos/raw/refs/heads/main/BLANCA%20-%20La%20Bondad%20de%20Dios_%20Video%20de%20Letras%20Oficial.mp3");
+    const audioReviveMusic = new Audio("https://cdn.jsdelivr.net/gh/LucasTiri/Noche-de-Reels-y-Gordos@main/BLANCA%20-%20La%20Bondad%20de%20Dios_%20Video%20de%20Letras%20Oficial.mp3");
     audioReviveMusic.preload = 'auto';
 
     // Audio para Evento TV Nivel 2
-    const audioTvEvent = new Audio("https://github.com/LucasTiri/Noche-de-Reels-y-Gordos/raw/refs/heads/main/Se%20termin%C3%B3%20la%20espera%20%20La%20Historia%20de%20Camila%20ser%C3%A1%20mi%20primer%20canci%C3%B3n%20del%202026.mp3");
+    const audioTvEvent = new Audio("https://cdn.jsdelivr.net/gh/LucasTiri/Noche-de-Reels-y-Gordos@main/Se%20termin%C3%B3%20la%20espera%20%20La%20Historia%20de%20Camila%20ser%C3%A1%20mi%20primer%20canci%C3%B3n%20del%202026.mp3");
     audioTvEvent.preload = 'auto';
 
-    const monsterImagesArray = [
-        imgMonster1, imgMonster2, imgMonster3, imgMonster4, imgMonster5, 
-        imgMonster6, imgMonster7, imgMonster8, imgMonster9, imgMonster10, 
-        imgMonster11, imgMonster12, imgMonster13
-    ];
 
     // --- VARIABLES DE USUARIO Y RANKING ---
     const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbxp-8jd8As2Gr1SN_rgSoh0TmIePSQgJnOzZ3qzGne8WmTdHO9wK-o8ExVkk8tRnUfn/exec"; 
@@ -420,15 +500,25 @@
     let rankingData = { normal: [], supervivencia: [] };
     let currentRankTab = 'normal';
 
-    // --- SISTEMA DE REVIVIR ---
+    // --- SISTEMA DE TIENDA Y REVIVIR ---
     const maxRevives = 3;
     let revivesUsed = 0;
     const reviveCosts = [100, 150, 200];
     let reviveCountdown = 5.0;
+    
+    // Items Tienda
+    let hasImagePack = false;
+    let imagePackEquipped = false;
+    const imgPackCost = 500;
+
+    let hasWoodRoom = false;
+    let woodRoomEquipped = false;
+    const woodRoomCost = 750;
 
     // UI Elements
     const loginScreen = document.getElementById('loginScreen');
     const rankingScreen = document.getElementById('rankingScreen');
+    const storeScreen = document.getElementById('storeScreen');
     const playerNameInput = document.getElementById('playerNameInput');
     const rankingList = document.getElementById('rankingList');
     
@@ -438,7 +528,7 @@
     const reviveScreen = document.getElementById('reviveScreen');
     const gameOverScreen = document.getElementById('gameOverScreen');
     const mainUI = document.getElementById('mainUI');
-    const coinHUD = document.getElementById('coinHUD');
+    const coinHUDWrapper = document.getElementById('coinHUDWrapper');
     
     const timerDisplay = document.getElementById('timerDisplay');
     const survivalTimerDisplay = document.getElementById('survivalTimerDisplay');
@@ -466,12 +556,7 @@
     // --- SISTEMA DE REELS ---
     const MASTER_REEL_VOLUME = 1.0; 
     const reelSoundsPaths = [
-        "https://github.com/LucasTiri/Noche-de-Reels-y-Gordos/raw/refs/heads/main/mp3-000-1000326130.mp3",
-        "https://www.myinstants.com/media/sounds/lingan-guli-wacha.mp3",
-        "https://www.myinstants.com/media/sounds/salesman-squid-game-edit-audio-blah-phonk.mp3",
-        "https://www.myinstants.com/media/sounds/all-goofy-sounds.mp3",
-        "https://www.myinstants.com/media/sounds/six-seven-w.mp3",
-        "https://www.myinstants.com/media/sounds/josh-hutcherson-meme.mp3"
+        "https://cdn.jsdelivr.net/gh/LucasTiri/Noche-de-Reels-y-Gordos@main/mp3-000-1000326130.mp3",
     ];
 
     let reelAudios = [];
@@ -479,27 +564,52 @@
     const REEL_BASE_VOL = 0.04 * MASTER_REEL_VOLUME; 
     const REEL_ACTIVE_VOL = 0.195 * MASTER_REEL_VOLUME; 
 
-    let playlistIndices = [0, 1, 2, 3, 4];
+    // CREAMOS LA LISTA DINAMICA DE INDICES
+    let playlistIndices = reelSoundsPaths.map((_, index) => index);
     let currentPlaylistPos = 0;
 
     function shufflePlaylist() {
+        if (playlistIndices.length <= 1) return;
         for (let i = playlistIndices.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [playlistIndices[i], playlistIndices[j]] = [playlistIndices[j], playlistIndices[i]];
         }
     }
 
+    // --- INTEGRACIÓN IPHONE VOLUME FIX ---
+    let reelGainNode;
+
+    function setupIPhoneAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        if (!reelGainNode) {
+            reelGainNode = audioCtx.createGain();
+            reelGainNode.connect(audioCtx.destination);
+            reelGainNode.gain.value = REEL_BASE_VOL; 
+            
+            reelAudios.forEach(a => {
+                try {
+                    const source = audioCtx.createMediaElementSource(a);
+                    source.connect(reelGainNode);
+                } catch(e) { 
+                    console.log("Audio ya conectado o problema de CORS."); 
+                }
+            });
+        }
+    }
+
     reelSoundsPaths.forEach((path) => {
-        let a = new Audio(path);
-        a.preload = 'auto'; 
-        a.volume = REEL_BASE_VOL;
+        let a = new Audio();
+        a.crossOrigin = "anonymous"; 
+        a.src = path;
+        a.preload = 'auto';
         a.addEventListener('ended', () => {
             a.currentTime = 0;
             a.pause();
+            if (playlistIndices.length === 0) return;
             currentPlaylistPos = (currentPlaylistPos + 1) % playlistIndices.length;
             let nextAudio = reelAudios[playlistIndices[currentPlaylistPos]];
-            nextAudio.volume = isReelPlaying ? REEL_ACTIVE_VOL : REEL_BASE_VOL;
-            nextAudio.play().catch(e => console.log(e));
+            if (nextAudio) nextAudio.play().catch(e => console.log(e));
         });
         reelAudios.push(a);
     });
@@ -510,10 +620,10 @@
     const synth = {
         bgmOsc: null, bgmGain: null, awakeOsc: null,
         preload: function() {
-            if (!audioCtx) audioCtx = new AudioContext();
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         },
         init: function() {
-            if (!audioCtx) audioCtx = new AudioContext();
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
             if (!this.awakeOsc) {
                 this.awakeOsc = audioCtx.createOscillator();
@@ -550,10 +660,19 @@
         },
         startReelSystem: function() {
             this.stopReelSystem(); 
+            if (playlistIndices.length === 0) return;
             shufflePlaylist();     
             currentPlaylistPos = 0;
             let currentAudio = reelAudios[playlistIndices[currentPlaylistPos]];
-            currentAudio.volume = REEL_BASE_VOL;
+            
+            if (!currentAudio) return;
+
+            if (reelGainNode && audioCtx) {
+                reelGainNode.gain.setValueAtTime(REEL_BASE_VOL, audioCtx.currentTime);
+            } else {
+                currentAudio.volume = REEL_BASE_VOL;
+            }
+            
             currentAudio.play().catch(e => console.log(e));
         },
         stopReelSystem: function() {
@@ -562,8 +681,14 @@
         },
         setReelActive: function(isActive) {
             isReelPlaying = isActive;
-            let currentAudio = reelAudios[playlistIndices[currentPlaylistPos]];
-            currentAudio.volume = isActive ? REEL_ACTIVE_VOL : REEL_BASE_VOL;
+            
+            if (reelGainNode && audioCtx) {
+                const targetVol = isActive ? REEL_ACTIVE_VOL : REEL_BASE_VOL;
+                reelGainNode.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.1);
+            } else {
+                let currentAudio = reelAudios[playlistIndices[currentPlaylistPos]];
+                if (currentAudio) currentAudio.volume = isActive ? REEL_ACTIVE_VOL : REEL_BASE_VOL;
+            }
         },
         playVictory: function() {
             if (!audioCtx) return;
@@ -581,12 +706,14 @@
         if (iosAudioUnlocked) return;
         
         if (!audioCtx) {
-            audioCtx = new AudioContext();
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             synth.awakeOsc = audioCtx.createOscillator();
             const awakeGain = audioCtx.createGain(); awakeGain.gain.value = 0.0001; 
             synth.awakeOsc.connect(awakeGain); awakeGain.connect(audioCtx.destination); synth.awakeOsc.start();
         }
         if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        setupIPhoneAudio();
 
         const allAudios = [...reelAudios, audioCar, audioChicken, windSound, audioReviveMusic, audioTvEvent];
         allAudios.forEach(a => {
@@ -608,7 +735,6 @@
     document.addEventListener('touchstart', unlockGlobalAudio, {once: true});
     document.addEventListener('mousedown', unlockGlobalAudio, {once: true});
 
-    // Estado del juego
     let gameState = 'MENU'; 
     let lastTime = 0; 
     let timeSurvived = 0; 
@@ -629,21 +755,12 @@
     let lightningFlash = 0;
     let startedFromSurvival = false;
 
-    // --- EVENTOS DE FONDO ---
     let eventCar = { triggered: false, active: false, timer: 0 };
     let eventChicken = { triggered: false, active: false, timer: 0 };
     let eventTv = { triggered: false, active: false, timer: 0 };
 
     let boss = {
-        state: 'NONE', 
-        timer: 10000,
-        progress: 0,
-        wobble: 0,
-        hp: 50,
-        maxHp: 50,
-        phase: 1,
-        spawnIdx: 3,
-        cooldown: 0
+        state: 'NONE', timer: 10000, progress: 0, wobble: 0, hp: 50, maxHp: 50, phase: 1, spawnIdx: 3, cooldown: 0
     };
 
     let victoryAnim = { active: false, progress: 0 }; 
@@ -652,10 +769,9 @@
     const spawnPoints = [
         { x: 90,  y: 150, name: 'Ventana', side: 'left' },
         { x: 300, y: 50,  name: 'Techo', side: 'center' },
-        { x: 60,  y: 590, name: 'Televisor', side: 'left' },
+        { x: 65,  y: 550, name: 'Televisor', side: 'left' },
         { x: 500, y: 250, name: 'Puerta', side: 'right' },
-        { x: 480, y: 500, name: 'Armario', side: 'right' },
-        { x: 490, y: 750, name: 'Bajo la cama', side: 'right' }
+        { x: 480, y: 500, name: 'Armario', side: 'right' }
     ];
 
     let monsters = [];
@@ -684,6 +800,7 @@
 
     function updateCoinHUD() {
         document.getElementById('coinTotalHUD').textContent = playerMonedas;
+        document.getElementById('storeCoinTotal').textContent = playerMonedas;
     }
 
     function resetGame() {
@@ -691,7 +808,7 @@
         gameOverScreen.classList.add('hidden');
         mainUI.style.opacity = '0';
         gameState = 'MENU';
-        coinHUD.classList.remove('hidden');
+        coinHUDWrapper.classList.remove('hidden');
         
         timerDisplay.classList.remove('hidden');
         survivalTimerDisplay.classList.add('hidden');
@@ -708,7 +825,7 @@
     function startGame() {
         startScreen.classList.add('hidden');
         mainUI.style.opacity = '1';
-        coinHUD.classList.add('hidden'); // Ocultar al jugar
+        coinHUDWrapper.classList.add('hidden'); 
         rightBatteryWrapper.classList.add('hidden');
         leftBatteryWrapper.querySelector('.text-xs').textContent = "BATERÍA TELÉFONO";
         
@@ -762,7 +879,7 @@
     function testLevel3() {
         startScreen.classList.add('hidden');
         mainUI.style.opacity = '1';
-        coinHUD.classList.add('hidden'); // Ocultar al jugar
+        coinHUDWrapper.classList.add('hidden'); 
         rightBatteryWrapper.classList.remove('hidden');
         leftBatteryWrapper.querySelector('.text-xs').textContent = "BATERÍA IZQ.";
         
@@ -814,7 +931,6 @@
         victoryAnim.active = true;
         victoryAnim.progress = 0;
         monsters = []; 
-        
         renderLevelStars(level + 1, true);
     }
 
@@ -831,7 +947,7 @@
         synth.stopBGM(); 
         synth.stopReelSystem(); 
         mainUI.style.opacity = '0';
-        coinHUD.classList.remove('hidden'); // Mostrar en transicion
+        coinHUDWrapper.classList.remove('hidden'); 
         level2Screen.classList.remove('hidden');
         
         monsters = [];
@@ -840,7 +956,7 @@
     function startLevel2() {
         level2Screen.classList.add('hidden');
         mainUI.style.opacity = '1';
-        coinHUD.classList.add('hidden'); // Ocultar al jugar
+        coinHUDWrapper.classList.add('hidden'); 
         
         rightBatteryWrapper.classList.remove('hidden');
         leftBatteryWrapper.querySelector('.text-xs').textContent = "BATERÍA IZQ.";
@@ -854,7 +970,6 @@
         
         renderLevelStars(level); 
 
-        // Reset TV event trigger for Level 2
         eventTv = { triggered: false, active: false, timer: 0 };
         audioTvEvent.pause(); audioTvEvent.currentTime = 0;
 
@@ -880,7 +995,7 @@
         synth.stopBGM(); 
         synth.stopReelSystem(); 
         mainUI.style.opacity = '0';
-        coinHUD.classList.remove('hidden'); // Mostrar en transicion
+        coinHUDWrapper.classList.remove('hidden'); 
         level3Screen.classList.remove('hidden');
         
         monsters = [];
@@ -889,7 +1004,7 @@
     function startLevel3() {
         level3Screen.classList.add('hidden');
         mainUI.style.opacity = '1';
-        coinHUD.classList.add('hidden'); // Ocultar al jugar
+        coinHUDWrapper.classList.add('hidden'); 
         
         rightBatteryWrapper.classList.remove('hidden');
         leftBatteryWrapper.querySelector('.text-xs').textContent = "BATERÍA IZQ.";
@@ -918,7 +1033,6 @@
         requestAnimationFrame(gameLoop);
     }
 
-    // --- NUEVO MANEJO DE MUERTE Y REVIVIR ---
     function handleDeath() {
         if (revivesUsed < maxRevives) {
             gameState = 'REVIVE_PROMPT';
@@ -940,10 +1054,9 @@
             }
 
             mainUI.style.opacity = '0';
-            coinHUD.classList.remove('hidden'); // Mostrar HUD al decidir
+            coinHUDWrapper.classList.remove('hidden'); 
             reviveScreen.classList.remove('hidden');
 
-            // Pausa audios
             synth.stopBGM();
             windSound.pause();
             synth.stopReelSystem(); 
@@ -969,7 +1082,6 @@
             revivesUsed++;
             updateCoinHUD();
             
-            // Avisar a la API que se gastaron monedas
             fetch(URL_GOOGLE_SCRIPT, {
                 method: 'POST',
                 body: JSON.stringify({
@@ -980,21 +1092,18 @@
                 })
             }).catch(e => console.log(e));
 
-            // Transición Épica
             gameState = 'REVIVE_TRANSITION';
-            coinHUD.classList.add('hidden');
+            coinHUDWrapper.classList.add('hidden');
             
             const flash = document.getElementById('whiteFlash');
             flash.style.display = 'block';
-            void flash.offsetWidth; // Forzar repintado
+            void flash.offsetWidth; 
             flash.style.opacity = '1';
 
-            // Tras 100ms ocultamos la pantalla de revivir y empezamos a quitar el destello
             setTimeout(() => {
                 reviveScreen.classList.add('hidden');
                 flash.style.opacity = '0';
                 
-                // Cuando termina el destello (300ms despues), iniciamos la imagen y música
                 setTimeout(() => {
                     flash.style.display = 'none';
                     
@@ -1002,37 +1111,41 @@
                     const img = document.getElementById('reviveTransitionImg');
                     imgContainer.style.display = 'flex';
                     
-                    audioReviveMusic.currentTime = 210; // Empieza en 3:30
+                    audioReviveMusic.currentTime = 210; 
                     audioReviveMusic.volume = 0;
                     audioReviveMusic.play().catch(e => console.log(e));
 
-                    // Fade IN de Audio (0.5s)
+                    let simVolIn = 0;
                     let fadeIn = setInterval(() => {
-                        if(audioReviveMusic.volume < 0.95) audioReviveMusic.volume = Math.min(1, audioReviveMusic.volume + 0.05);
-                        else clearInterval(fadeIn);
+                        simVolIn += 0.05;
+                        if(simVolIn < 0.95) audioReviveMusic.volume = Math.min(1, simVolIn);
+                        else {
+                            audioReviveMusic.volume = 1;
+                            clearInterval(fadeIn);
+                        }
                     }, 25);
 
-                    // Fade IN de imagen (2s)
                     img.style.transitionDuration = '2000ms';
                     void img.offsetWidth;
                     img.style.opacity = '1';
 
-                    // Tras 3 segundos (2 de fade + 1 estatico), empieza el Fade OUT
                     setTimeout(() => {
                         img.style.transitionDuration = '2000ms';
                         img.style.opacity = '0';
                         
-                        // Fade OUT de Audio (1.5s)
+                        let simVolOut = 1.0;
                         let fadeOut = setInterval(() => {
-                            if(audioReviveMusic.volume > 0.05) audioReviveMusic.volume = Math.max(0, audioReviveMusic.volume - 0.033);
-                            else {
+                            simVolOut -= 0.033;
+                            if(simVolOut > 0.05) {
+                                audioReviveMusic.volume = Math.max(0, simVolOut);
+                            } else {
                                 audioReviveMusic.volume = 0;
                                 audioReviveMusic.pause();
+                                audioReviveMusic.currentTime = 0;
                                 clearInterval(fadeOut);
                             }
                         }, 50);
 
-                        // Al terminar el fade out (2s), iniciamos cuenta regresiva 3..2..1
                         setTimeout(() => {
                             imgContainer.style.display = 'none';
                             
@@ -1045,22 +1158,22 @@
                             setTimeout(() => { 
                                 countdownEl.style.display = 'none';
                                 resumeGameAfterRevive();
-                            }, 1200); // Fin cuenta regresiva
+                            }, 1200); 
                             
-                        }, 2000); // Tiempo fade out imagen
+                        }, 2000); 
 
-                    }, 3000); // Tiempo espera fade out imagen
+                    }, 3000); 
 
-                }, 300); // Duración fade out destello
+                }, 300); 
 
-            }, 100); // Duración destello pleno
+            }, 100); 
         }
     }
 
     function resumeGameAfterRevive() {
         mainUI.style.opacity = '1';
         monsters = [];
-        globalSpawnTimer = 2000; // 2 segundos de gracia
+        globalSpawnTimer = 2000; 
         batteryLeft = 100;
         batteryRight = 100;
         phoneCenterActive = false;
@@ -1125,7 +1238,7 @@
         audioTvEvent.pause();
         
         mainUI.style.opacity = '0';
-        coinHUD.classList.remove('hidden'); // Mostrar HUD al morir
+        coinHUDWrapper.classList.remove('hidden'); 
         gameOverScreen.classList.remove('hidden');
         
         if (startedFromSurvival) {
@@ -1164,8 +1277,8 @@
         let behavior = Math.random();
 
         let allowedSpawns = [0, 1, 3]; 
-        if (level >= 2 || timeSurvived >= 15000) allowedSpawns.push(2); 
-        if (level >= 2 || timeSurvived >= 25000) allowedSpawns.push(4, 5); 
+        if (level >= 2 || timeSurvived >= 10000) allowedSpawns.push(2); 
+        if (level >= 2 || timeSurvived >= 18000) allowedSpawns.push(4); 
 
         if (level === 2 && boss.state === 'WALKING' && boss.phase === 2) {
             allowedSpawns = [0, 3];
@@ -1225,7 +1338,7 @@
             attackSpeedMult: 1,
             side: spawnPoints[idx].side,
             timer: 0,
-            imgIdx: Math.floor(Math.random() * 13) 
+            imgIdx: Math.floor(Math.random() * monsterImagesArray.length) 
         };
 
         if (behavior < 0.15) {
@@ -1264,10 +1377,8 @@
     }
 
     function update(dt) {
-        // No hacer logica de avance si estamos en transicion
         if (gameState === 'REVIVE_TRANSITION') return;
 
-        // --- LOGICA DE PANTALLA DE REVIVIR ---
         if (gameState === 'REVIVE_PROMPT') {
             reviveCountdown -= dt / 1000;
             document.getElementById('reviveTimerDisplay').textContent = Math.max(0, Math.ceil(reviveCountdown));
@@ -1308,7 +1419,7 @@
                 audioCar.currentTime = 0.3;
                 audioCar.play().catch(e=>console.log(e));
             }
-            if (timeSurvived >= 30000 && !eventChicken.triggered) {
+            if (timeSurvived >= 22000 && !eventChicken.triggered) {
                 eventChicken.triggered = true;
                 eventChicken.active = true;
                 eventChicken.timer = 0;
@@ -1317,7 +1428,6 @@
             }
         }
         
-        // Evento Nivel 2: Imagen y Cancion en la TV a los 15 segs
         if (level === 2) {
             if (lvl2Elapsed >= 15000 && !eventTv.triggered) {
                 eventTv.triggered = true;
@@ -1339,13 +1449,12 @@
         }
         if (eventTv.active) {
             eventTv.timer += dt;
-            // Manejo del volumen del audio de TV (fade in 1.2s y fade out 1.2s, total 4s)
             let alpha = 0;
             if (eventTv.timer <= 1200) alpha = eventTv.timer / 1200;
             else if (eventTv.timer <= 2800) alpha = 1.0;
             else if (eventTv.timer <= 4000) alpha = 1.0 - ((eventTv.timer - 2800) / 1200);
             
-            audioTvEvent.volume = Math.max(0, Math.min(1, alpha)) * 0.8; // Max volumen 0.8
+            audioTvEvent.volume = Math.max(0, Math.min(1, alpha)) * 0.8; 
 
             if (eventTv.timer > 4000) {
                 eventTv.active = false;
@@ -1354,8 +1463,8 @@
         }
 
         let showPreBossWarning = false;
-        if (level === 1 && timeSurvived >= 40000 && timeSurvived <= 45000) showPreBossWarning = true; 
-        if (level === 2 && lvl2Elapsed >= 70000 && lvl2Elapsed <= 75000) showPreBossWarning = true; 
+        if (level === 1 && timeSurvived >= 20000 && timeSurvived <= 25000) showPreBossWarning = true; 
+        if (level === 2 && lvl2Elapsed >= 55000 && lvl2Elapsed <= 60000) showPreBossWarning = true; 
 
         if (showPreBossWarning) {
             bossWarningText.style.opacity = 0.25 + Math.sin(Date.now() / 150) * 0.15; 
@@ -1378,7 +1487,7 @@
 
         let batteryRegenRate = 15; 
         if (level === 2) {
-            if (lvl2Elapsed >= 55000) { 
+            if (lvl2Elapsed >= 40000) { 
                 maxMonsters = 3;
                 batteryRegenRate = 22; 
             } else {
@@ -1434,11 +1543,11 @@
 
         if (level === 1) {
             let seconds = timeSurvived / 1000;
-            difficulty = 1 + (seconds * 0.025); 
-            if (seconds > 40) difficulty += (seconds - 40) * 0.025;   
+            difficulty = 1 + (seconds * 0.03); 
+            if (seconds > 20) difficulty += (seconds - 20) * 0.03;   
             difficulty = Math.min(difficulty, 6.0); 
         } else if (level === 2) {
-            let duration = 85000; 
+            let duration = 70000; 
             let progress = Math.min(1, Math.max(0, lvl2Elapsed / duration));
             difficulty = lerp(1.1, 2.97, progress);
         } else if (level === 3) {
@@ -1448,11 +1557,11 @@
             difficulty = baseDifficulty * Math.pow(1.15, intervals20s); 
         }
 
-        if (level === 1 && timeSurvived >= 55000 && boss.state === 'NONE') {
+        if (level === 1 && timeSurvived >= 35000 && boss.state === 'NONE') {
             boss.state = 'INTRO'; boss.timer = 10000; boss.phase = 1; boss.hp = 50; boss.maxHp = 50;
         }
 
-        if (level === 2 && lvl2Elapsed >= 85000 && boss.state === 'NONE') {
+        if (level === 2 && lvl2Elapsed >= 70000 && boss.state === 'NONE') {
             boss.state = 'INTRO'; 
             boss.timer = 5000; 
             boss.phase = 1; 
@@ -1536,14 +1645,14 @@
                 spawnMonster();
                 
                 if (level === 1) {
-                    let progress = Math.min(1, timeSurvived / 50000); 
+                    let progress = Math.min(1, timeSurvived / 30000); 
                     let baseTimer = lerp(2500, 300, progress) + Math.random() * lerp(1500, 300, progress);
                     globalSpawnTimer = baseTimer / difficulty;
                 } else if (level === 2) {
                     if (boss.state === 'WALKING' && boss.phase === 2) {
                         globalSpawnTimer = 0; 
                     } else {
-                        let progressDelay = Math.min(1, Math.max(0, lvl2Elapsed / 55000));
+                        let progressDelay = Math.min(1, Math.max(0, lvl2Elapsed / 45000));
                         let currentAvgTimer = lerp(2250, 1500, progressDelay);
                         
                         globalSpawnTimer = currentAvgTimer * 0.7 + Math.random() * (currentAvgTimer * 0.6);
@@ -1552,11 +1661,6 @@
                     globalSpawnTimer = 500; 
                 }
             }
-        }
-
-        let anyWarning = false;
-        if (boss.state === 'INTRO' || boss.state === 'WAITING' || boss.state === 'WALKING') {
-            anyWarning = true;
         }
 
         let isAnyPhoneActive = (level === 1 && phoneCenterActive) || (level >= 2 && (phoneLeftActive || phoneRightActive));
@@ -1575,7 +1679,6 @@
 
             switch (m.state) {
                 case 'WARNING':
-                    anyWarning = true;
                     m.timer -= dt;
                     if (m.timer <= 0) m.state = 'ATTACKING';
                     break;
@@ -1608,12 +1711,6 @@
                     }
                     break;
             }
-        }
-
-        if (anyWarning && level === 1 && timeSurvived <= 15000) {
-            warningText.style.opacity = 0.5 + Math.sin(Date.now() / 80) * 0.5;
-        } else {
-            warningText.style.opacity = 0;
         }
 
         synth.setReelActive(isAnyPhoneActive);
@@ -1712,9 +1809,46 @@
     }
 
     function drawRoom() {
-        ctx.fillStyle = '#0a0b10'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        let colors = {
+            bg: '#0a0b10',
+            floor: '#050508',
+            windowInside: '#111522',
+            windowFrame: '#05060a',
+            door: '#0c0d12',
+            tvStand: '#1a1a24',
+            tvStandDetail: '#050508',
+            bed: '#1c1e2e'
+        };
+
+        if (woodRoomEquipped) {
+            colors = {
+                bg: '#2e1c15', 
+                floor: '#1c100b',
+                windowInside: '#1a110e', 
+                windowFrame: '#4a2c20', 
+                door: '#3d2314', 
+                tvStand: '#543628', 
+                tvStandDetail: '#2b1b13',
+                bed: '#5c1f1f' 
+            };
+        }
+
+        ctx.fillStyle = colors.bg; ctx.fillRect(0, 0, canvas.width, 500);
+        ctx.fillStyle = colors.floor; ctx.fillRect(0, 500, canvas.width, canvas.height - 500);
+
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(0, 500); ctx.lineTo(canvas.width, 500); ctx.stroke();
+
+        if (woodRoomEquipped) {
+            ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+            ctx.lineWidth = 2;
+            for(let y=0; y<500; y+=40) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+        }
         
-        ctx.fillStyle = '#111522'; ctx.fillRect(30, 50, 120, 250);
+        ctx.fillStyle = colors.windowInside; ctx.fillRect(30, 50, 120, 250);
         
         ctx.save();
         ctx.beginPath();
@@ -1742,24 +1876,9 @@
                 ctx.fill();
             }
         }
-
-        if (eventChicken.active) {
-            let t = eventChicken.timer / 1000;
-            let alpha = 0;
-            if (t <= 1.5) alpha = t / 1.5; 
-            else if (t <= 3.5) alpha = 1.0; 
-            else if (t <= 5.0) alpha = 1.0 - ((t - 3.5) / 1.5); 
-
-            ctx.globalAlpha = Math.max(0, Math.min(1, alpha)) * 0.35;
-            if (imgChicken.complete && imgChicken.naturalWidth > 0) {
-                ctx.drawImage(imgChicken, 40, 125, 100, 100);
-            }
-            ctx.globalAlpha = 1.0;
-        }
-
         ctx.restore(); 
 
-        ctx.strokeStyle = '#05060a'; ctx.lineWidth = 10; ctx.strokeRect(30, 50, 120, 250);
+        ctx.strokeStyle = colors.windowFrame; ctx.lineWidth = 10; ctx.strokeRect(30, 50, 120, 250);
         ctx.beginPath(); ctx.moveTo(90, 50); ctx.lineTo(90, 300); ctx.moveTo(30, 175); ctx.lineTo(150, 175); ctx.stroke();
         
         ctx.fillStyle = '#222';
@@ -1770,32 +1889,52 @@
         ctx.beginPath(); ctx.moveTo(280, 50); ctx.lineTo(180, 250); ctx.lineTo(420, 250); ctx.lineTo(320, 50); ctx.fill();
         ctx.globalAlpha = 1;
 
-        ctx.fillStyle = '#0c0d12'; ctx.fillRect(450, 100, 120, 400); ctx.strokeRect(450, 100, 120, 400);
+        if (imgDoorPlaceholder.complete && imgDoorPlaceholder.naturalWidth > 0 && !imgDoorPlaceholder.src.includes("URL_IMAGEN_PUERTA_AQUI.png")) {
+            ctx.drawImage(imgDoorPlaceholder, 450, 100, 120, 400);
+        } else {
+            ctx.fillStyle = colors.door; ctx.fillRect(450, 100, 120, 400); ctx.strokeRect(450, 100, 120, 400);
+        }
         
-        ctx.fillStyle = '#1a1a24'; ctx.fillRect(20, 570, 90, 60); 
-        ctx.fillStyle = '#050508'; ctx.fillRect(25, 575, 80, 50);
+        if (imgTvPlaceholder.complete && imgTvPlaceholder.naturalWidth > 0 && !imgTvPlaceholder.src.includes("URL_IMAGEN_TELEVISOR_AQUI.png")) {
+            ctx.drawImage(imgTvPlaceholder, 10, 520, 110, 80);
+        } else {
+            ctx.fillStyle = colors.tvStand; ctx.fillRect(10, 520, 110, 80); 
+            ctx.fillStyle = colors.tvStandDetail; ctx.fillRect(15, 525, 100, 70);
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.strokeRect(10, 520, 110, 80);
+            ctx.fillStyle = '#ff0000'; ctx.beginPath(); ctx.arc(105, 590, 2, 0, Math.PI*2); ctx.fill();
+        }
 
-        // --- DIBUJO DEL EVENTO DE LA TV ---
-        if (eventTv.active) {
-            let t = eventTv.timer;
+        if (eventChicken.active) {
+            let t = eventChicken.timer / 1000;
             let alpha = 0;
-            if (t <= 1200) alpha = t / 1200; // Fade in
-            else if (t <= 2800) alpha = 1.0; // Se mantiene
-            else if (t <= 4000) alpha = 1.0 - ((t - 2800) / 1200); // Fade out
-            
+            if (t <= 1.5) alpha = t / 1.5; 
+            else if (t <= 3.5) alpha = 1.0; 
+            else if (t <= 5.0) alpha = 1.0 - ((t - 3.5) / 1.5); 
+
             ctx.save();
-            ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
-            if (imgTvEvent.complete && imgTvEvent.naturalWidth > 0) {
-                // Dibujamos la imagen exactamente adentro de la pantalla (x:25, y:575, w:80, h:50)
-                ctx.drawImage(imgTvEvent, 25, 575, 80, 50);
+            ctx.globalAlpha = Math.max(0, Math.min(1, alpha)) * 0.35;
+            if (imgChicken.complete && imgChicken.naturalWidth > 0) {
+                ctx.drawImage(imgChicken, 15, 525, 100, 70);
             }
             ctx.restore();
         }
 
-        ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.strokeRect(20, 570, 90, 60);
-        ctx.fillStyle = '#ff0000'; ctx.beginPath(); ctx.arc(100, 625, 2, 0, Math.PI*2); ctx.fill();
-        
-        ctx.fillStyle = '#1c1e2e'; ctx.beginPath(); 
+        if (eventTv.active) {
+            let t = eventTv.timer;
+            let alpha = 0;
+            if (t <= 1200) alpha = t / 1200; 
+            else if (t <= 2800) alpha = 1.0; 
+            else if (t <= 4000) alpha = 1.0 - ((t - 2800) / 1200); 
+            
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+            if (imgTvEvent.complete && imgTvEvent.naturalWidth > 0) {
+                ctx.drawImage(imgTvEvent, 15, 525, 100, 70);
+            }
+            ctx.restore();
+        }
+
+        ctx.fillStyle = colors.bed; ctx.beginPath(); 
         ctx.moveTo(170, 800); ctx.lineTo(220, 630); ctx.lineTo(380, 630); ctx.lineTo(430, 800); ctx.fill();
     }
 
@@ -2050,8 +2189,6 @@
         updateTouches(e.touches);
     });
 
-    // --- FUNCIONES DEL MENÚ Y RANKING ---
-
     function iniciarSesion() {
         const name = playerNameInput.value.trim();
         const pin = document.getElementById('playerPinInput').value.trim();
@@ -2085,8 +2222,27 @@
                 playerPin = pin;
                 playerMonedas = data.monedas || 0;
                 
+                const inv = data.inventario || {};
+                if (inv['imgPack1'] && inv['imgPack1'].owned) {
+                    hasImagePack = true;
+                    imagePackEquipped = inv['imgPack1'].equipped;
+                } else {
+                    hasImagePack = false;
+                    imagePackEquipped = false;
+                }
+                
+                if (inv['woodRoom'] && inv['woodRoom'].owned) {
+                    hasWoodRoom = true;
+                    woodRoomEquipped = inv['woodRoom'].equipped;
+                } else {
+                    hasWoodRoom = false;
+                    woodRoomEquipped = false;
+                }
+                
+                updateMonsterArray(); 
+                
                 updateCoinHUD();
-                document.getElementById('coinHUD').classList.remove('hidden');
+                coinHUDWrapper.classList.remove('hidden');
 
                 errorMsg.classList.add('hidden');
                 loginScreen.classList.add('hidden');
@@ -2106,9 +2262,145 @@
         });
     }
 
+    function showStore() {
+        startScreen.classList.add('hidden');
+        coinHUDWrapper.classList.add('hidden');
+        storeScreen.classList.remove('hidden');
+        updateStoreUI();
+    }
+
+    function hideStore() {
+        storeScreen.classList.add('hidden');
+        coinHUDWrapper.classList.remove('hidden');
+        startScreen.classList.remove('hidden');
+    }
+
+    function updateStoreUI() {
+        document.getElementById('storeCoinTotal').textContent = playerMonedas;
+        
+        const btnPack = document.getElementById('btnBuyImgPack');
+        const textAction = document.getElementById('imgPackActionText');
+        const textPrice = document.getElementById('imgPackPriceText');
+
+        if (!hasImagePack) {
+            textAction.textContent = "Comprar";
+            textPrice.textContent = imgPackCost + " 🪙";
+            textPrice.classList.remove('hidden');
+            
+            btnPack.disabled = playerMonedas < imgPackCost;
+            btnPack.className = "btn !m-0 w-full flex flex-col items-center py-2";
+        } else {
+            textPrice.classList.add('hidden');
+            btnPack.disabled = false;
+            
+            if (imagePackEquipped) {
+                textAction.textContent = "DESEQUIPAR";
+                btnPack.className = "btn btn-red !m-0 w-full flex flex-col items-center py-3";
+            } else {
+                textAction.textContent = "EQUIPAR";
+                btnPack.className = "btn !bg-green-500 !text-black !m-0 w-full flex flex-col items-center py-3";
+            }
+        }
+        
+        const btnWood = document.getElementById('btnBuyWoodRoom');
+        const textActionWood = document.getElementById('woodRoomActionText');
+        const textPriceWood = document.getElementById('woodRoomPriceText');
+
+        if (!hasWoodRoom) {
+            textActionWood.textContent = "Comprar";
+            textPriceWood.textContent = woodRoomCost + " 🪙";
+            textPriceWood.classList.remove('hidden');
+            
+            btnWood.disabled = playerMonedas < woodRoomCost;
+            btnWood.className = "btn !m-0 w-full flex flex-col items-center py-2";
+        } else {
+            textPriceWood.classList.add('hidden');
+            btnWood.disabled = false;
+            
+            if (woodRoomEquipped) {
+                textActionWood.textContent = "DESEQUIPAR";
+                btnWood.className = "btn btn-red !m-0 w-full flex flex-col items-center py-3";
+            } else {
+                textActionWood.textContent = "EQUIPAR";
+                btnWood.className = "btn !bg-green-500 !text-black !m-0 w-full flex flex-col items-center py-3";
+            }
+        }
+    }
+
+    function handleImgPackClick() {
+        const btnPack = document.getElementById('btnBuyImgPack');
+        btnPack.disabled = true;
+
+        if (!hasImagePack) {
+            if (playerMonedas >= imgPackCost) {
+                fetch(URL_GOOGLE_SCRIPT, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'buyItem', nombre: playerName, pin: playerPin, itemId: 'imgPack1', costo: imgPackCost })
+                }).then(() => {
+                    playerMonedas -= imgPackCost;
+                    hasImagePack = true;
+                    imagePackEquipped = true;
+                    updateCoinHUD();
+                    updateMonsterArray();
+                    updateStoreUI();
+                }).catch(e => {
+                    console.log("Error comprando:", e);
+                    btnPack.disabled = false;
+                });
+            }
+        } else {
+            let nuevoEstado = !imagePackEquipped;
+            fetch(URL_GOOGLE_SCRIPT, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'equipItem', nombre: playerName, pin: playerPin, itemId: 'imgPack1', equipped: nuevoEstado })
+            }).then(() => {
+                imagePackEquipped = nuevoEstado;
+                updateMonsterArray();
+                updateStoreUI();
+            }).catch(e => {
+                console.log("Error equipando:", e);
+                btnPack.disabled = false;
+            });
+        }
+    }
+    
+    function handleWoodRoomClick() {
+        const btnWood = document.getElementById('btnBuyWoodRoom');
+        btnWood.disabled = true;
+
+        if (!hasWoodRoom) {
+            if (playerMonedas >= woodRoomCost) {
+                fetch(URL_GOOGLE_SCRIPT, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'buyItem', nombre: playerName, pin: playerPin, itemId: 'woodRoom', costo: woodRoomCost })
+                }).then(() => {
+                    playerMonedas -= woodRoomCost;
+                    hasWoodRoom = true;
+                    woodRoomEquipped = true;
+                    updateCoinHUD();
+                    updateStoreUI();
+                }).catch(e => {
+                    console.log("Error comprando:", e);
+                    btnWood.disabled = false;
+                });
+            }
+        } else {
+            let nuevoEstado = !woodRoomEquipped;
+            fetch(URL_GOOGLE_SCRIPT, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'equipItem', nombre: playerName, pin: playerPin, itemId: 'woodRoom', equipped: nuevoEstado })
+            }).then(() => {
+                woodRoomEquipped = nuevoEstado;
+                updateStoreUI();
+            }).catch(e => {
+                console.log("Error equipando:", e);
+                btnWood.disabled = false;
+            });
+        }
+    }
+
     function cambiarPestanaRanking(modo) {
         currentRankTab = modo;
-        
         document.getElementById('btnRankNormal').className = modo === 'normal' 
             ? 'px-4 py-2 bg-green-500 text-black font-bold rounded-lg transition' 
             : 'px-4 py-2 bg-gray-700 text-gray-300 font-bold rounded-lg transition hover:bg-gray-600';
@@ -2116,19 +2408,16 @@
         document.getElementById('btnRankSupervivencia').className = modo === 'supervivencia' 
             ? 'px-4 py-2 bg-purple-500 text-white font-bold rounded-lg transition' 
             : 'px-4 py-2 bg-gray-700 text-gray-300 font-bold rounded-lg transition hover:bg-gray-600';
-            
         renderRankingList();
     }
 
     function renderRankingList() {
         let datos = rankingData[currentRankTab] || [];
         rankingList.innerHTML = '';
-        
         if (datos.length === 0) {
             rankingList.innerHTML = '<p class="text-center text-gray-400 mt-4">Aún no hay puntajes en este modo.</p>';
             return;
         }
-        
         datos.forEach((jugador, index) => {
             let colorNombre = index === 0 ? 'text-yellow-400 text-xl' : 'text-white';
             rankingList.innerHTML += `
@@ -2142,6 +2431,7 @@
 
     function showRanking() {
         startScreen.classList.add('hidden');
+        coinHUDWrapper.classList.add('hidden');
         rankingScreen.classList.remove('hidden');
         rankingList.innerHTML = '<p class="text-center text-gray-400 animate-pulse mt-4">Cargando ranking...</p>';
 
@@ -2159,12 +2449,12 @@
 
     function hideRanking() {
         rankingScreen.classList.add('hidden');
+        coinHUDWrapper.classList.remove('hidden');
         startScreen.classList.remove('hidden');
     }
 
     function enviarPuntaje(score, coins) {
         let modoToSave = startedFromSurvival ? 'supervivencia' : 'normal';
-        
         fetch(URL_GOOGLE_SCRIPT, {
             method: 'POST',
             body: JSON.stringify({ 
