@@ -249,8 +249,11 @@
     <!-- PANTALLA DE LOGIN -->
     <div id="loginScreen" class="screen">
         <h1 class="text-5xl font-bold mb-8 text-green-400">Reel Defender</h1>
-        <input type="text" id="playerNameInput" placeholder="Tu nombre..." class="px-4 py-3 text-xl text-black rounded-lg mb-6 text-center font-bold outline-none border-4 border-transparent focus:border-green-400" maxlength="12" autocomplete="off">
-        <button class="btn" onclick="goToTutorial()">Entrar</button>
+        <input type="text" id="playerNameInput" placeholder="Tu nombre..." class="px-4 py-3 text-xl text-black rounded-lg mb-4 text-center font-bold outline-none border-4 border-transparent focus:border-green-400" maxlength="12" autocomplete="off">
+        <input type="password" id="playerPinInput" placeholder="Tu PIN secreto..." class="px-4 py-3 text-xl text-black rounded-lg mb-6 text-center font-bold outline-none border-4 border-transparent focus:border-green-400" maxlength="4" autocomplete="off">
+    
+        <button id="btnEntrar" class="btn" onclick="iniciarSesion()">Entrar</button>
+        <p id="loginError" class="text-red-500 mt-4 font-bold hidden">Error</p>
     </div>
 
     <!-- PANTALLA DE RANKING -->
@@ -386,8 +389,10 @@
     ];
 
     // --- NUEVAS VARIABLES PARA EL RANKING ---
-    let playerName = "";
     const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbxp-8jd8As2Gr1SN_rgSoh0TmIePSQgJnOzZ3qzGne8WmTdHO9wK-o8ExVkk8tRnUfn/exec"; 
+    let playerName = "";
+    let playerPin = "";
+    let playerMonedas = 0;
     let rankingData = { normal: [], supervivencia: [] };
     let currentRankTab = 'normal';
 
@@ -1775,17 +1780,56 @@
 
     // --- FUNCIONES DEL MENÚ Y RANKING ---
 
-    function goToTutorial() {
-        const name = playerNameInput.value.trim();
-        if (name === "") {
-            alert("¡Tenés que ingresar un nombre para jugar!");
-            return;
-        }
-        playerName = name;
-        loginScreen.classList.add('hidden');
-        startScreen.classList.remove('hidden'); 
-        unlockGlobalAudio(); // Asegurar que el audio se desbloquee al entrar
+    function iniciarSesion() {
+    const name = playerNameInput.value.trim();
+    const pin = document.getElementById('playerPinInput').value.trim();
+    const errorMsg = document.getElementById('loginError');
+
+    if (name === "" || pin === "") {
+        errorMsg.innerText = "¡Ingresa un nombre y un PIN!";
+        errorMsg.classList.remove('hidden');
+        return;
     }
+
+    const btn = document.getElementById('btnEntrar');
+    btn.innerText = "Conectando...";
+    btn.disabled = true;
+
+    fetch(URL_GOOGLE_SCRIPT, {
+        method: 'POST',
+        body: JSON.stringify({ 
+            action: 'login', 
+            nombre: name, 
+            pin: pin 
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        btn.innerText = "Entrar";
+        btn.disabled = false;
+
+        if (data.status === "success") {
+            playerName = name;
+            playerPin = pin;
+            playerMonedas = data.monedas;
+            
+            errorMsg.classList.add('hidden');
+            loginScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden'); 
+            unlockGlobalAudio();
+        } else {
+            errorMsg.innerText = data.message;
+            errorMsg.classList.remove('hidden');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        btn.innerText = "Entrar";
+        btn.disabled = false;
+        errorMsg.innerText = "Error de conexión. Intenta de nuevo.";
+        errorMsg.classList.remove('hidden');
+    });
+}
 
     function cambiarPestanaRanking(modo) {
         currentRankTab = modo;
@@ -1848,21 +1892,27 @@
     }
 
     function enviarPuntaje() {
-        // Determinamos el score real a guardar y el modo jugado
-        let scoreToSave = startedFromSurvival ? (timeSurvived - level3StartTime) : timeSurvived;
-        let modoToSave = startedFromSurvival ? 'supervivencia' : 'normal';
+    let scoreToSave = startedFromSurvival ? (timeSurvived - level3StartTime) : timeSurvived;
+    let modoToSave = startedFromSurvival ? 'supervivencia' : 'normal';
 
-        if (scoreToSave > 0) {
-            fetch(URL_GOOGLE_SCRIPT, {
-                method: 'POST',
-                body: JSON.stringify({ 
-                    nombre: playerName, 
-                    puntaje: scoreToSave,
-                    modo: modoToSave 
-                }) 
-            }).catch(err => console.error("Error al guardar:", err));
-        }
+    // Conversión: 1 segundo sobrevivido = 1 moneda ganada
+    let monedasGanadas = Math.floor(scoreToSave / 1000); 
+
+    if (scoreToSave > 0) {
+        playerMonedas += monedasGanadas; // Actualizamos la billetera local al instante
+
+        fetch(URL_GOOGLE_SCRIPT, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                action: 'saveScore',
+                nombre: playerName, 
+                puntaje: scoreToSave,
+                modo: modoToSave,
+                monedasGanadas: monedasGanadas
+            }) 
+        }).catch(err => console.error("Error al guardar puntaje y monedas:", err));
     }
+}
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
