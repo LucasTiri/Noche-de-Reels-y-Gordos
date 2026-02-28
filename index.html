@@ -701,7 +701,7 @@
 
     synth.preload();
 
-    let iosAudioUnlocked = false;
+        let iosAudioUnlocked = false;
     function unlockGlobalAudio() {
         if (iosAudioUnlocked) return;
         
@@ -713,9 +713,13 @@
         }
         if (audioCtx.state === 'suspended') audioCtx.resume();
 
+        // Conecta los audios al GainNode (Esto no traba el teléfono, es seguro)
         setupIPhoneAudio();
 
-        const allAudios = [...reelAudios, audioCar, audioChicken, windSound, audioReviveMusic, audioTvEvent];
+        // LA CORRECCIÓN: Quitamos los reels de aquí. 
+        // Solo cebamos los audios sueltos que saltan de sorpresa (eventos, jefe, etc.)
+        const allAudios = [audioCar, audioChicken, windSound, audioReviveMusic, audioTvEvent];
+        
         allAudios.forEach(a => {
             a.muted = true; 
             let p = a.play();
@@ -729,6 +733,7 @@
                 });
             }
         });
+        
         iosAudioUnlocked = true;
     }
 
@@ -2474,3 +2479,4 @@
 </script>
 </body>
 </html>
+
