@@ -101,6 +101,13 @@
         .btn-red:hover:not(:disabled) {
             background-color: #dc2626;
         }
+        .btn-orange {
+            background-color: #f97316;
+            color: black;
+        }
+        .btn-orange:hover:not(:disabled) {
+            background-color: #ea580c;
+        }
         #hud {
             padding: 20px;
             display: flex;
@@ -322,6 +329,20 @@
                     <span id="woodRoomPriceText" class="text-sm">750 🪙</span>
                 </button>
             </div>
+
+            <!-- Producto: Chancletas -->
+            <div class="bg-gray-700 rounded-lg p-4 flex flex-col items-center text-center relative border border-gray-600">
+                <div id="chanclaBadge" class="absolute top-2 right-2 bg-purple-900 text-purple-200 text-xs font-bold px-2 py-1 rounded">Nvl. 0</div>
+                <div class="w-24 h-24 bg-gray-900 rounded-md mb-3 flex justify-center items-center overflow-hidden border border-gray-500 relative">
+                    <span class="text-5xl">🩴</span>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-1">Chancletas Defensoras</h3>
+                <p class="text-sm text-gray-300 mb-4 h-10">Revive gratis automáticamente. (+1 vida por nivel)</p>
+                <button id="btnBuyChancla" class="btn !m-0 w-full flex flex-col items-center py-2" onclick="handleChanclaClick()">
+                    <span id="chanclaActionText">Comprar Nvl 1</span>
+                    <span id="chanclaPriceText" class="text-sm">1000 🪙</span>
+                </button>
+            </div>
         </div>
         <button class="btn px-8 py-3 text-lg mt-0" onclick="hideStore()">Volver</button>
     </div>
@@ -355,7 +376,7 @@
             <button class="btn !bg-blue-600 !text-white !m-0 w-[280px] h-[64px] text-xl" onclick="showStore()">🛒 Tienda</button>
         </div>
         
-        <div class="mt-10 flex flex-col gap-4 items-center w-full max-w-sm">
+        <div class="mt-8 flex flex-col gap-4 items-center w-full max-w-sm">
             <button class="btn !m-0 w-[280px] h-[64px] text-xl" style="background-color: #eab308; color: black;" onclick="showRanking()">🏆 Ver Ranking Top 15</button>
         </div>
     </div>
@@ -442,15 +463,26 @@
     const imgMonster12 = crearImagen("https://i.postimg.cc/D0QLfTH1/Screenshot-20260225-211848-Photos.png");
     const imgMonster13 = crearImagen("https://i.postimg.cc/NF8mGcSH/Screenshot-20260225-215552-One-UI-Home.png");
     const imgVictory = crearImagen("https://i.postimg.cc/MTm1GmfV/20260125-152321.png");
-
     const imgChicken = crearImagen("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTyQ3bP1PZlL3pL6xXOkLoRDqWHryvokaboDg&s");
     
     // --- IMAGEN EVENTO TV (NIVEL 2) ---
     const imgTvEvent = crearImagen("https://cdn.jsdelivr.net/gh/LucasTiri/Noche-de-Reels-y-Gordos@main/Captura%20de%20pantalla%202026-02-27%20120921.png");
 
     // --- NUEVAS IMÁGENES PLACEHOLDER (TELEVISOR Y PUERTA/ARMARIO) ---
-    const imgTvPlaceholder = crearImagen("https://static.vecteezy.com/system/resources/thumbnails/038/015/883/small/ai-generated-modern-tv-isolated-on-transparent-background-free-png.png");
-    const imgDoorPlaceholder = crearImagen("https://github.com/LucasTiri/Noche-de-Reels-y-Gordos/blob/main/Obertura-puerta-Derecha.png?raw=true");
+    const ENLACE_IMAGEN_TV = ""; // EJEMPLO: "https://tudominio.com/tu-imagen-tv.png"
+    const ENLACE_IMAGEN_PUERTA = ""; // EJEMPLO: "https://tudominio.com/tu-imagen-puerta.png"
+
+    const imgTvPlaceholder = new Image();
+    if (ENLACE_IMAGEN_TV !== "") {
+        imgTvPlaceholder.crossOrigin = "anonymous";
+        imgTvPlaceholder.src = ENLACE_IMAGEN_TV;
+    }
+
+    const imgDoorPlaceholder = new Image();
+    if (ENLACE_IMAGEN_PUERTA !== "") {
+        imgDoorPlaceholder.crossOrigin = "anonymous";
+        imgDoorPlaceholder.src = ENLACE_IMAGEN_PUERTA;
+    }
 
     // ==========================================
     // 📥 CARGA AQUÍ LAS IMÁGENES DEL PACK COMPRADO
@@ -465,7 +497,6 @@
         imgMonster11, imgMonster12, imgMonster13
     ];
     
-    // Array dinámico que usa el juego
     let monsterImagesArray = [...baseMonsterImagesArray];
 
     function updateMonsterArray() {
@@ -477,20 +508,53 @@
         }
     }
 
-    // --- AUDIOS ---
-    const audioCar = new Audio('https://www.myinstants.com/media/sounds/oye-gela-escuchate-esto-saturado.mp3');
-    audioCar.preload = 'auto';
-    const audioChicken = new Audio('https://www.myinstants.com/media/sounds/chicken-on-tree-screaming.mp3');
-    audioChicken.preload = 'auto';
-    
-    // Audio para Transición de Revivir
-    const audioReviveMusic = new Audio("https://cdn.jsdelivr.net/gh/LucasTiri/Noche-de-Reels-y-Gordos@main/BLANCA%20-%20La%20Bondad%20de%20Dios_%20Video%20de%20Letras%20Oficial.mp3");
-    audioReviveMusic.preload = 'auto';
+    // --- NUEVO SISTEMA DE AUDIO TOTAL ---
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioContext(); // Comienza suspendido
 
-    // Audio para Evento TV Nivel 2
+    const audioBuffers = {
+        reels: [],
+        revive: null
+    };
+
+    async function loadAudioBuffer(url) {
+        try {
+            const response = await fetch(url);
+            const arrayBuffer = await response.arrayBuffer();
+            return await audioCtx.decodeAudioData(arrayBuffer);
+        } catch(e) {
+            console.error("Error descargando el audio:", url, e);
+            return null;
+        }
+    }
+
+    loadAudioBuffer("https://cdn.jsdelivr.net/gh/LucasTiri/Noche-de-Reels-y-Gordos@main/BLANCA%20-%20La%20Bondad%20de%20Dios_%20Video%20de%20Letras%20Oficial.mp3").then(b => audioBuffers.revive = b);
+    
+    // REELS 
+    const cantidadDeReels = 11;
+    const baseReelsUrl = "https://cdn.jsdelivr.net/gh/LucasTiri/Noche-de-Reels-y-Gordos@main/mp3%20-%20copia/"; 
+    for (let i = 1; i <= cantidadDeReels; i++) {
+        loadAudioBuffer(`${baseReelsUrl}reel_${i}.mp3`).then(b => {
+            if (b) audioBuffers.reels.push(b);
+        });
+    }
+
+    // --- AUDIOS HTML5 ---
+    const audioCar = new Audio('https://www.myinstants.com/media/sounds/oye-gela-escuchate-esto-saturado.mp3');
+    audioCar.volume = 0.64;
+    const audioChicken = new Audio('https://www.myinstants.com/media/sounds/chicken-on-tree-screaming.mp3');
+    audioChicken.volume = 0.64;
+    const windSound = new Audio('https://actions.google.com/sounds/v1/horror/hallow_wind.ogg');
+    windSound.loop = true;      
+    windSound.volume = 0.9;
+    
     const audioTvEvent = new Audio("https://cdn.jsdelivr.net/gh/LucasTiri/Noche-de-Reels-y-Gordos@main/Se%20termin%C3%B3%20la%20espera%20%20La%20Historia%20de%20Camila%20ser%C3%A1%20mi%20primer%20canci%C3%B3n%20del%202026.mp3");
+    audioTvEvent.crossOrigin = "anonymous";
     audioTvEvent.preload = 'auto';
 
+    const audioCar2Event = new Audio("https://cdn.jsdelivr.net/gh/LucasTiri/Noche-de-Reels-y-Gordos@main/Me%20llama.mp3");
+    audioCar2Event.crossOrigin = "anonymous";
+    audioCar2Event.preload = 'auto';
 
     // --- VARIABLES DE USUARIO Y RANKING ---
     const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbxp-8jd8As2Gr1SN_rgSoh0TmIePSQgJnOzZ3qzGne8WmTdHO9wK-o8ExVkk8tRnUfn/exec"; 
@@ -500,10 +564,9 @@
     let rankingData = { normal: [], supervivencia: [] };
     let currentRankTab = 'normal';
 
-    // --- SISTEMA DE TIENDA Y REVIVIR ---
     const maxRevives = 3;
     let revivesUsed = 0;
-    const reviveCosts = [100, 150, 200];
+    const reviveCosts = [100, 175, 250]; 
     let reviveCountdown = 5.0;
     
     // Items Tienda
@@ -514,6 +577,10 @@
     let hasWoodRoom = false;
     let woodRoomEquipped = false;
     const woodRoomCost = 750;
+
+    let chancletasOwned = 0; 
+    let chancletasActive = 0; 
+    let chanclaReviveTimer = 0; 
 
     // UI Elements
     const loginScreen = document.getElementById('loginScreen');
@@ -547,90 +614,28 @@
     const gameOverScoreLabel = document.getElementById('gameOverScoreLabel');
     const gameOverBox = document.getElementById('gameOverBox');
 
-    // Audio Externo
-    const windSound = new Audio('https://actions.google.com/sounds/v1/horror/hallow_wind.ogg');
-    windSound.loop = true;      
-    windSound.volume = 0.9;    
-    windSound.preload = 'auto';
-
-    // --- SISTEMA DE REELS ---
+    // --- LÓGICA DE REPRODUCCIÓN WEB AUDIO API ---
     const MASTER_REEL_VOLUME = 1.0; 
-    const reelSoundsPaths = [
-        "https://cdn.jsdelivr.net/gh/LucasTiri/Noche-de-Reels-y-Gordos@main/mp3-000-1000326130.mp3",
-    ];
+    const REEL_BASE_VOL = 0.35 * MASTER_REEL_VOLUME; 
+    const REEL_ACTIVE_VOL = 0.6 * MASTER_REEL_VOLUME; 
 
-    let reelAudios = [];
+    const reelGainNode = audioCtx.createGain();
+    reelGainNode.connect(audioCtx.destination);
+    reelGainNode.gain.value = REEL_BASE_VOL;
+
+    let currentReelSource = null;
+    let isReelSystemActive = false;
     let isReelPlaying = false;
-    const REEL_BASE_VOL = 0.04 * MASTER_REEL_VOLUME; 
-    const REEL_ACTIVE_VOL = 0.195 * MASTER_REEL_VOLUME; 
-
-    // CREAMOS LA LISTA DINAMICA DE INDICES
-    let playlistIndices = reelSoundsPaths.map((_, index) => index);
+    let playlistIndices = [];
     let currentPlaylistPos = 0;
 
-    function shufflePlaylist() {
-        if (playlistIndices.length <= 1) return;
-        for (let i = playlistIndices.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [playlistIndices[i], playlistIndices[j]] = [playlistIndices[j], playlistIndices[i]];
-        }
-    }
-
-    // --- INTEGRACIÓN IPHONE VOLUME FIX ---
-    let reelGainNode;
-
-    function setupIPhoneAudio() {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        
-        if (!reelGainNode) {
-            reelGainNode = audioCtx.createGain();
-            reelGainNode.connect(audioCtx.destination);
-            reelGainNode.gain.value = REEL_BASE_VOL; 
-            
-            reelAudios.forEach(a => {
-                try {
-                    const source = audioCtx.createMediaElementSource(a);
-                    source.connect(reelGainNode);
-                } catch(e) { 
-                    console.log("Audio ya conectado o problema de CORS."); 
-                }
-            });
-        }
-    }
-
-    reelSoundsPaths.forEach((path) => {
-        let a = new Audio();
-        a.crossOrigin = "anonymous"; 
-        a.src = path;
-        a.preload = 'auto';
-        a.addEventListener('ended', () => {
-            a.currentTime = 0;
-            a.pause();
-            if (playlistIndices.length === 0) return;
-            currentPlaylistPos = (currentPlaylistPos + 1) % playlistIndices.length;
-            let nextAudio = reelAudios[playlistIndices[currentPlaylistPos]];
-            if (nextAudio) nextAudio.play().catch(e => console.log(e));
-        });
-        reelAudios.push(a);
-    });
-
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    let audioCtx;
+    let tvGainNode = null;
+    let reviveSource = null;
+    let reviveGainNode = null;
+    let car2GainNode = null;
 
     const synth = {
-        bgmOsc: null, bgmGain: null, awakeOsc: null,
-        preload: function() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        },
-        init: function() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            if (!this.awakeOsc) {
-                this.awakeOsc = audioCtx.createOscillator();
-                const awakeGain = audioCtx.createGain(); awakeGain.gain.value = 0.0001; 
-                this.awakeOsc.connect(awakeGain); awakeGain.connect(audioCtx.destination); this.awakeOsc.start();
-            }
-        },
+        bgmOsc: null, bgmGain: null, lfo: null, awakeOsc: null,
         playTone: function(freq, type, duration, vol = 0.1) {
             if (!audioCtx) return;
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
@@ -658,69 +663,139 @@
             if (this.bgmOsc) { this.bgmOsc.stop(); this.bgmOsc.disconnect(); this.bgmOsc = null; }
             if (this.lfo) { this.lfo.stop(); this.lfo.disconnect(); this.lfo = null; }
         },
-        startReelSystem: function() {
+	shuffleReels: function() {
+            // Crea un arreglo del 0 al 10 (los 11 audios) y los mezcla aleatoriamente
+            playlistIndices = Array.from({length: audioBuffers.reels.length}, (_, i) => i);
+            for (let i = playlistIndices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [playlistIndices[i], playlistIndices[j]] = [playlistIndices[j], playlistIndices[i]];
+            }
+            currentPlaylistPos = 0; // Reiniciamos el cursor a la posición 0
+        },
+        startReelSystem: function(nuevaPartida = false) {
             this.stopReelSystem(); 
-            if (playlistIndices.length === 0) return;
-            shufflePlaylist();     
-            currentPlaylistPos = 0;
-            let currentAudio = reelAudios[playlistIndices[currentPlaylistPos]];
+            if (audioBuffers.reels.length === 0) return;
             
-            if (!currentAudio) return;
+            // Si es una partida nueva o la lista está vacía, creamos una nueva mezcla
+            if (nuevaPartida || playlistIndices.length !== audioBuffers.reels.length) {
+                this.shuffleReels();
+            }
 
-            if (reelGainNode && audioCtx) {
-                reelGainNode.gain.setValueAtTime(REEL_BASE_VOL, audioCtx.currentTime);
-            } else {
-                currentAudio.volume = REEL_BASE_VOL;
+            isReelSystemActive = true;
+            this.playNextReel();
+        },
+        playNextReel: function() {
+            if (!isReelSystemActive || audioBuffers.reels.length === 0) return;
+            
+            if (currentReelSource) {
+                currentReelSource.onended = null;
+                try { currentReelSource.stop(); currentReelSource.disconnect(); } catch(e){}
+                currentReelSource = null;
             }
             
-            currentAudio.play().catch(e => console.log(e));
+            currentReelSource = audioCtx.createBufferSource();
+            currentReelSource.buffer = audioBuffers.reels[playlistIndices[currentPlaylistPos]];
+            currentReelSource.connect(reelGainNode);
+            
+            currentReelSource.onended = () => {
+                if (isReelSystemActive) {
+                    currentPlaylistPos++;
+                    // ¡Si ya reprodujimos los 11 reels, volvemos a mezclar para la siguiente ronda!
+                    if (currentPlaylistPos >= audioBuffers.reels.length) {
+                        this.shuffleReels();
+                    }
+                    this.playNextReel();
+                }
+            };
+            currentReelSource.start();
         },
         stopReelSystem: function() {
-            isReelPlaying = false;
-            reelAudios.forEach(a => a.pause());
-        },
-        setReelActive: function(isActive) {
-            isReelPlaying = isActive;
-            
-            if (reelGainNode && audioCtx) {
-                const targetVol = isActive ? REEL_ACTIVE_VOL : REEL_BASE_VOL;
-                reelGainNode.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.1);
-            } else {
-                let currentAudio = reelAudios[playlistIndices[currentPlaylistPos]];
-                if (currentAudio) currentAudio.volume = isActive ? REEL_ACTIVE_VOL : REEL_BASE_VOL;
+            isReelSystemActive = false;
+            if (currentReelSource) {
+                currentReelSource.onended = null;
+                try { currentReelSource.stop(); currentReelSource.disconnect(); } catch(e){}
+                currentReelSource = null;
             }
         },
+        pauseReelSystem: function() {
+            if (currentReelSource) {
+                currentReelSource.onended = null;
+                try { currentReelSource.stop(); currentReelSource.disconnect(); } catch(e){}
+                currentReelSource = null;
+            }
+        },
+        resumeReelSystem: function() {
+            // ¡AQUÍ ESTÁ LA MAGIA PARA REVIVIR! Volvemos a encender la variable principal.
+            isReelSystemActive = true; 
+            if (audioBuffers.reels.length > 0) {
+                // Al llamar playNextReel, arranca exactamente en el audio donde te habías quedado
+                this.playNextReel();
+            }
+        },
+
+        setReelActive: function(isActive) {
+            if (isReelPlaying === isActive) return; 
+            isReelPlaying = isActive;
+            
+            const targetVol = isActive ? REEL_ACTIVE_VOL : REEL_BASE_VOL;
+            const now = audioCtx.currentTime;
+            
+            reelGainNode.gain.cancelScheduledValues(now);
+            reelGainNode.gain.setValueAtTime(reelGainNode.gain.value, now);
+            reelGainNode.gain.linearRampToValueAtTime(targetVol, now + 0.1);
+        },
         playVictory: function() {
-            if (!audioCtx) return;
             this.playTone(440, 'triangle', 0.15, 0.4); 
             setTimeout(() => this.playTone(554, 'triangle', 0.15, 0.4), 150); 
             setTimeout(() => this.playTone(659, 'triangle', 0.15, 0.4), 300); 
             setTimeout(() => this.playTone(880, 'triangle', 0.5, 0.5), 450); 
+        },
+        playWarning: function(speedMult) {
+            if (!audioCtx) return;
+            const osc1 = audioCtx.createOscillator(); const osc2 = audioCtx.createOscillator();
+            const gain = audioCtx.createGain(); const baseFreq = 200 + (speedMult * 400); 
+            osc1.type = 'sawtooth'; osc2.type = 'triangle'; const detune = 20 + Math.random() * 60;
+            osc1.frequency.setValueAtTime(baseFreq, audioCtx.currentTime); osc2.frequency.setValueAtTime(baseFreq + detune, audioCtx.currentTime);
+            osc1.frequency.exponentialRampToValueAtTime(baseFreq * 0.7, audioCtx.currentTime + 0.4);
+            osc2.frequency.exponentialRampToValueAtTime((baseFreq + detune) * 0.7, audioCtx.currentTime + 0.4);
+            gain.gain.setValueAtTime(0, audioCtx.currentTime); 
+            gain.gain.linearRampToValueAtTime(0.04, audioCtx.currentTime + 0.05); // Reducido a la mitad
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4); 
+            osc1.connect(gain); osc2.connect(gain); gain.connect(audioCtx.destination);
+            osc1.start(); osc2.start(); osc1.stop(audioCtx.currentTime + 0.4); osc2.stop(audioCtx.currentTime + 0.4);
+        },
+        playAttack: function(speedMult) {
+            if (!audioCtx) return;
+            const freq = 600 + (speedMult * 500) + (Math.random() * 300);
+            this.playTone(freq, 'sawtooth', 0.08, 0.05); // Reducido a la mitad
+        },
+        playChanclaRevive: function() {
+            if (!audioCtx) return;
+            this.playTone(600, 'square', 0.1, 0.2);
+            setTimeout(() => this.playTone(800, 'square', 0.1, 0.2), 150);
+            setTimeout(() => this.playTone(1200, 'square', 0.3, 0.2), 300);
         }
     };
 
-    synth.preload();
-
-        let iosAudioUnlocked = false;
+    let iosAudioUnlocked = false;
     function unlockGlobalAudio() {
         if (iosAudioUnlocked) return;
-        
-        if (!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            synth.awakeOsc = audioCtx.createOscillator();
-            const awakeGain = audioCtx.createGain(); awakeGain.gain.value = 0.0001; 
-            synth.awakeOsc.connect(awakeGain); awakeGain.connect(audioCtx.destination); synth.awakeOsc.start();
-        }
         if (audioCtx.state === 'suspended') audioCtx.resume();
 
-        // Conecta los audios al GainNode (Esto no traba el teléfono, es seguro)
-        setupIPhoneAudio();
+        // ENGANCHAMOS TV Y CAR2 A GANANCIAS WEB AUDIO
+        if (!tvGainNode) {
+            tvGainNode = audioCtx.createGain();
+            tvGainNode.connect(audioCtx.destination);
+            try { audioCtx.createMediaElementSource(audioTvEvent).connect(tvGainNode); } catch(e){}
+        }
+        if (!car2GainNode) {
+            car2GainNode = audioCtx.createGain();
+            car2GainNode.connect(audioCtx.destination);
+            try { audioCtx.createMediaElementSource(audioCar2Event).connect(car2GainNode); } catch(e){}
+        }
 
-        // LA CORRECCIÓN: Quitamos los reels de aquí. 
-        // Solo cebamos los audios sueltos que saltan de sorpresa (eventos, jefe, etc.)
-        const allAudios = [audioCar, audioChicken, windSound, audioReviveMusic, audioTvEvent];
-        
-        allAudios.forEach(a => {
+        const htmlAudios = [audioCar, audioChicken, audioTvEvent, audioCar2Event];
+        htmlAudios.forEach(a => {
             a.muted = true; 
             let p = a.play();
             if (p !== undefined) {
@@ -728,11 +803,15 @@
                     a.pause();
                     a.currentTime = 0;
                     a.muted = false; 
-                }).catch(() => {
-                    a.muted = false;
-                });
+                }).catch(() => { a.muted = false; });
             }
         });
+        
+        if (!synth.awakeOsc) {
+            synth.awakeOsc = audioCtx.createOscillator();
+            const awakeGain = audioCtx.createGain(); awakeGain.gain.value = 0.0001; 
+            synth.awakeOsc.connect(awakeGain); awakeGain.connect(audioCtx.destination); synth.awakeOsc.start();
+        }
         
         iosAudioUnlocked = true;
     }
@@ -763,6 +842,7 @@
     let eventCar = { triggered: false, active: false, timer: 0 };
     let eventChicken = { triggered: false, active: false, timer: 0 };
     let eventTv = { triggered: false, active: false, timer: 0 };
+    let eventCar2 = { triggered: false, active: false, timer: 0 };
 
     let boss = {
         state: 'NONE', timer: 10000, progress: 0, wobble: 0, hp: 50, maxHp: 50, phase: 1, spawnIdx: 3, cooldown: 0
@@ -774,7 +854,7 @@
     const spawnPoints = [
         { x: 90,  y: 150, name: 'Ventana', side: 'left' },
         { x: 300, y: 50,  name: 'Techo', side: 'center' },
-        { x: 65,  y: 550, name: 'Televisor', side: 'left' },
+        { x: 65,  y: 550, name: 'Televisor', side: 'left' }, 
         { x: 500, y: 250, name: 'Puerta', side: 'right' },
         { x: 480, y: 500, name: 'Armario', side: 'right' }
     ];
@@ -803,6 +883,13 @@
         }
     }
 
+    function updateBatteryUI(el, val) {
+        el.style.width = `${val}%`;
+        if (val < 25) el.style.backgroundColor = '#ef4444'; 
+        else if (val < 50) el.style.backgroundColor = '#eab308'; 
+        else el.style.backgroundColor = '#4ade80';
+    }
+
     function updateCoinHUD() {
         document.getElementById('coinTotalHUD').textContent = playerMonedas;
         document.getElementById('storeCoinTotal').textContent = playerMonedas;
@@ -822,9 +909,14 @@
         audioCar.pause(); audioCar.currentTime = 0;
         audioChicken.pause(); audioChicken.currentTime = 0;
         audioTvEvent.pause(); audioTvEvent.currentTime = 0;
+        audioCar2Event.pause(); audioCar2Event.currentTime = 0;
+        
+        if (reviveSource) { try { reviveSource.stop(); } catch(e){} reviveSource = null; }
+
         eventCar.active = false;
         eventChicken.active = false;
         eventTv.active = false;
+        eventCar2.active = false;
     }
 
     function startGame() {
@@ -846,6 +938,7 @@
         level = 1;
         maxMonsters = 1;
         revivesUsed = 0; 
+        chancletasActive = chancletasOwned; 
         
         lastSpawnSide = 'none';
         consecutiveSideCount = 0;
@@ -857,9 +950,12 @@
         audioCar.pause(); audioCar.currentTime = 0;
         audioChicken.pause(); audioChicken.currentTime = 0;
         audioTvEvent.pause(); audioTvEvent.currentTime = 0;
+        audioCar2Event.pause(); audioCar2Event.currentTime = 0;
+        
         eventCar = { triggered: false, active: false, timer: 0 };
         eventChicken = { triggered: false, active: false, timer: 0 };
         eventTv = { triggered: false, active: false, timer: 0 };
+        eventCar2 = { triggered: false, active: false, timer: 0 };
 
         boss = { state: 'NONE', timer: 10000, progress: 0, wobble: 0, hp: 50, maxHp: 50, phase: 1, spawnIdx: 3, cooldown: 0 };
         victoryAnim = { active: false, progress: 0 };
@@ -874,12 +970,68 @@
         lastTime = performance.now(); 
         requestAnimationFrame(gameLoop);
         
-        synth.init();
-        synth.playBGM(); 
+        synth.playBGM();
+        windSound.currentTime = 0; 
+        windSound.play().catch(e => {});
+        synth.startReelSystem(true); 
+    }
+
+   /* function testLevel2() {
+        startScreen.classList.add('hidden');
+        mainUI.style.opacity = '1';
+        coinHUDWrapper.classList.add('hidden'); 
+        rightBatteryWrapper.classList.remove('hidden');
+        leftBatteryWrapper.querySelector('.text-xs').textContent = "BATERÍA IZQ.";
+        
+        timerDisplay.classList.remove('hidden');
+        survivalTimerDisplay.classList.add('hidden'); 
+        levelIndicator.classList.remove('hidden');
+        
+        gameState = 'PLAYING';
+        timeSurvived = 35000; 
+        level2StartTime = 35000; 
+        level3StartTime = 0;
+        difficulty = 1.1;
+        level = 2;
+        maxMonsters = 2;
+        revivesUsed = 0; 
+        chancletasActive = chancletasOwned;
+        
+        lastSpawnSide = 'none';
+        consecutiveSideCount = 0;
+        lightningFlash = 0;
+        startedFromSurvival = false;
+        
+        renderLevelStars(level);
+
+        audioCar.pause(); audioCar.currentTime = 0;
+        audioChicken.pause(); audioChicken.currentTime = 0;
+        audioTvEvent.pause(); audioTvEvent.currentTime = 0;
+        audioCar2Event.pause(); audioCar2Event.currentTime = 0;
+        
+        eventCar = { triggered: false, active: false, timer: 0 };
+        eventChicken = { triggered: false, active: false, timer: 0 };
+        eventTv = { triggered: false, active: false, timer: 0 };
+        eventCar2 = { triggered: false, active: false, timer: 0 };
+
+        boss = { state: 'NONE', timer: 10000, progress: 0, wobble: 0, hp: 50, maxHp: 50, phase: 1, spawnIdx: 3, cooldown: 0 };
+        victoryAnim = { active: false, progress: 0 };
+        
+        batteryLeft = 100; batteryRight = 100;
+        phoneLeftActive = false; phoneRightActive = false; phoneCenterActive = false;
+        
+        monsters = [];
+        globalSpawnTimer = 2000;
+        warningText.style.opacity = '0';
+        
+        lastTime = performance.now(); 
+        requestAnimationFrame(gameLoop);
+        
+        synth.playBGM();
         windSound.currentTime = 0; 
         windSound.play().catch(e => {});
         synth.startReelSystem(); 
-    }
+    } */
 
     function testLevel3() {
         startScreen.classList.add('hidden');
@@ -896,6 +1048,7 @@
         timeSurvived = 240000; 
         level3StartTime = 240000; 
         revivesUsed = 0; 
+        chancletasActive = chancletasOwned;
         
         difficulty = 2.0; 
         level = 3;
@@ -909,6 +1062,7 @@
         eventCar.triggered = true; 
         eventChicken.triggered = true;
         eventTv.triggered = true;
+        eventCar2.triggered = true;
 
         boss = { state: 'DEFEATED', timer: 10000, progress: 0, wobble: 0, hp: 50, maxHp: 50, phase: 1, spawnIdx: 3, cooldown: 0 };
         victoryAnim = { active: false, progress: 0 };
@@ -923,19 +1077,19 @@
         lastTime = performance.now(); 
         requestAnimationFrame(gameLoop);
 
-        synth.init();
         synth.playBGM();
         windSound.currentTime = 0;
         windSound.play().catch(e => {});
-        synth.startReelSystem(); 
+        synth.startReelSystem(true); 
     }
 
     function startVictoryAnimation() {
-        synth.stopBGM();
+        synth.stopReelSystem(); 
         synth.playVictory();
         victoryAnim.active = true;
         victoryAnim.progress = 0;
         monsters = []; 
+        
         renderLevelStars(level + 1, true);
     }
 
@@ -976,7 +1130,9 @@
         renderLevelStars(level); 
 
         eventTv = { triggered: false, active: false, timer: 0 };
+        eventCar2 = { triggered: false, active: false, timer: 0 };
         audioTvEvent.pause(); audioTvEvent.currentTime = 0;
+        audioCar2Event.pause(); audioCar2Event.currentTime = 0;
 
         boss = { state: 'NONE', timer: 10000, progress: 0, wobble: 0, hp: 50, maxHp: 50, phase: 1, spawnIdx: 3, cooldown: 0 };
         
@@ -1039,6 +1195,12 @@
     }
 
     function handleDeath() {
+        if (chancletasActive > 0) {
+            chancletasActive--;
+            triggerChanclaRevive(); 
+            return;
+        }
+
         if (revivesUsed < maxRevives) {
             gameState = 'REVIVE_PROMPT';
             reviveCountdown = 5.0;
@@ -1068,6 +1230,7 @@
             audioCar.pause();
             audioChicken.pause();
             audioTvEvent.pause();
+            audioCar2Event.pause();
 
             drawRoom();
         } else {
@@ -1089,96 +1252,115 @@
             
             fetch(URL_GOOGLE_SCRIPT, {
                 method: 'POST',
-                body: JSON.stringify({
-                    action: 'deductCoins',
-                    nombre: playerName,
-                    pin: playerPin,
-                    amount: cost
-                })
+                body: JSON.stringify({ action: 'deductCoins', nombre: playerName, pin: playerPin, amount: cost })
             }).catch(e => console.log(e));
 
-            gameState = 'REVIVE_TRANSITION';
-            coinHUDWrapper.classList.add('hidden');
-            
-            const flash = document.getElementById('whiteFlash');
-            flash.style.display = 'block';
-            void flash.offsetWidth; 
-            flash.style.opacity = '1';
-
-            setTimeout(() => {
-                reviveScreen.classList.add('hidden');
-                flash.style.opacity = '0';
-                
-                setTimeout(() => {
-                    flash.style.display = 'none';
-                    
-                    const imgContainer = document.getElementById('reviveImageContainer');
-                    const img = document.getElementById('reviveTransitionImg');
-                    imgContainer.style.display = 'flex';
-                    
-                    audioReviveMusic.currentTime = 210; 
-                    audioReviveMusic.volume = 0;
-                    audioReviveMusic.play().catch(e => console.log(e));
-
-                    let simVolIn = 0;
-                    let fadeIn = setInterval(() => {
-                        simVolIn += 0.05;
-                        if(simVolIn < 0.95) audioReviveMusic.volume = Math.min(1, simVolIn);
-                        else {
-                            audioReviveMusic.volume = 1;
-                            clearInterval(fadeIn);
-                        }
-                    }, 25);
-
-                    img.style.transitionDuration = '2000ms';
-                    void img.offsetWidth;
-                    img.style.opacity = '1';
-
-                    setTimeout(() => {
-                        img.style.transitionDuration = '2000ms';
-                        img.style.opacity = '0';
-                        
-                        let simVolOut = 1.0;
-                        let fadeOut = setInterval(() => {
-                            simVolOut -= 0.033;
-                            if(simVolOut > 0.05) {
-                                audioReviveMusic.volume = Math.max(0, simVolOut);
-                            } else {
-                                audioReviveMusic.volume = 0;
-                                audioReviveMusic.pause();
-                                audioReviveMusic.currentTime = 0;
-                                clearInterval(fadeOut);
-                            }
-                        }, 50);
-
-                        setTimeout(() => {
-                            imgContainer.style.display = 'none';
-                            
-                            const countdownEl = document.getElementById('resumeCountdown');
-                            countdownEl.style.display = 'flex';
-                            countdownEl.textContent = '3';
-                            
-                            setTimeout(() => { countdownEl.textContent = '2'; }, 400);
-                            setTimeout(() => { countdownEl.textContent = '1'; }, 800);
-                            setTimeout(() => { 
-                                countdownEl.style.display = 'none';
-                                resumeGameAfterRevive();
-                            }, 1200); 
-                            
-                        }, 2000); 
-
-                    }, 3000); 
-
-                }, 300); 
-
-            }, 100); 
+            reviveScreen.classList.add('hidden');
+            triggerEpicRevive();
         }
     }
 
-    function resumeGameAfterRevive() {
+    function triggerChanclaRevive() {
+        gameState = 'CHANCLA_REVIVE';
+        chanclaReviveTimer = 2.0; 
+        
+	synth.stopBGM();
+        windSound.pause();
+        synth.pauseReelSystem(); 
+        audioCar.pause();
+        audioChicken.pause();
+        audioTvEvent.pause();
+        audioCar2Event.pause();
+        
+        monsters = [];
+        synth.playChanclaRevive();
+    }
+
+    function triggerEpicRevive() {
+        gameState = 'REVIVE_TRANSITION';
+        coinHUDWrapper.classList.add('hidden');
+        
+        windSound.pause();
+        synth.pauseReelSystem(); 
+        audioCar.pause();
+        audioChicken.pause();
+        audioTvEvent.pause();
+        audioCar2Event.pause();
+        
+        const flash = document.getElementById('whiteFlash');
+        flash.style.display = 'block';
+        void flash.offsetWidth; 
+        flash.style.opacity = '1';
+
+        setTimeout(() => {
+            flash.style.opacity = '0';
+            
+            setTimeout(() => {
+                flash.style.display = 'none';
+                
+                const imgContainer = document.getElementById('reviveImageContainer');
+                const img = document.getElementById('reviveTransitionImg');
+                imgContainer.style.display = 'flex';
+                
+                if (audioBuffers.revive) {
+                    reviveSource = audioCtx.createBufferSource();
+                    reviveSource.buffer = audioBuffers.revive;
+                    reviveGainNode = audioCtx.createGain();
+                    reviveGainNode.gain.value = 0; 
+                    
+                    reviveSource.connect(reviveGainNode);
+                    reviveGainNode.connect(audioCtx.destination);
+                    
+                    reviveSource.start(0, 210);
+                    reviveGainNode.gain.linearRampToValueAtTime(1.0, audioCtx.currentTime + 0.5);
+                }
+
+                img.style.transitionDuration = '2000ms';
+                void img.offsetWidth;
+                img.style.opacity = '1';
+
+                setTimeout(() => {
+                    img.style.transitionDuration = '2000ms';
+                    img.style.opacity = '0';
+                    
+                    if (reviveGainNode) {
+                        const now = audioCtx.currentTime;
+                        reviveGainNode.gain.cancelScheduledValues(now);
+                        reviveGainNode.gain.setValueAtTime(reviveGainNode.gain.value, now);
+                        reviveGainNode.gain.linearRampToValueAtTime(0, now + 1.5);
+                        
+                        setTimeout(() => {
+                            if (reviveSource) { try { reviveSource.stop(); } catch(e){} reviveSource = null; }
+                        }, 1500);
+                    }
+
+                    setTimeout(() => {
+                        imgContainer.style.display = 'none';
+                        
+                        const countdownEl = document.getElementById('resumeCountdown');
+                        countdownEl.style.display = 'flex';
+                        countdownEl.textContent = '3';
+                        
+                        setTimeout(() => { countdownEl.textContent = '2'; }, 400);
+                        setTimeout(() => { countdownEl.textContent = '1'; }, 800);
+                        setTimeout(() => { 
+                            countdownEl.style.display = 'none';
+                            resumeGameAfterRevive();
+                        }, 1200); 
+                        
+                    }, 2000); 
+
+                }, 3000); 
+
+            }, 300); 
+
+        }, 100); 
+    }
+
+function resumeGameAfterRevive() {
         mainUI.style.opacity = '1';
         monsters = [];
-        globalSpawnTimer = 2000; 
+        globalSpawnTimer = 1000; 
         batteryLeft = 100;
         batteryRight = 100;
         phoneCenterActive = false;
@@ -1194,8 +1376,14 @@
         
         synth.playBGM();
         windSound.play().catch(e => {});
-        synth.startReelSystem();
-        requestAnimationFrame(gameLoop);
+        synth.resumeReelSystem();
+        
+        if (eventCar.active) audioCar.play().catch(e=>{});
+        if (eventChicken.active) audioChicken.play().catch(e=>{});
+        if (eventTv.active) audioTvEvent.play().catch(e=>{});
+        if (eventCar2.active) audioCar2Event.play().catch(e=>{});
+
+        // ELIMINADO: requestAnimationFrame(gameLoop); <-- ¡Ya no duplicaremos el bucle!
     }
 
     function realGameOver() {
@@ -1241,6 +1429,7 @@
         audioCar.pause();
         audioChicken.pause();
         audioTvEvent.pause();
+        audioCar2Event.pause();
         
         mainUI.style.opacity = '0';
         coinHUDWrapper.classList.remove('hidden'); 
@@ -1365,7 +1554,7 @@
     }
 
     function gameLoop(timestamp) {
-        if (gameState !== 'PLAYING' && gameState !== 'REVIVE_PROMPT' && gameState !== 'REVIVE_TRANSITION') return;
+        if (gameState !== 'PLAYING' && gameState !== 'REVIVE_PROMPT' && gameState !== 'REVIVE_TRANSITION' && gameState !== 'CHANCLA_REVIVE') return;
         
         if (lastTime === 0) lastTime = timestamp;
         
@@ -1374,7 +1563,7 @@
         
         update(dt);
 
-        if (gameState === 'PLAYING') {
+        if (gameState === 'PLAYING' || gameState === 'CHANCLA_REVIVE') {
             draw();
         }
         
@@ -1383,6 +1572,14 @@
 
     function update(dt) {
         if (gameState === 'REVIVE_TRANSITION') return;
+
+        if (gameState === 'CHANCLA_REVIVE') {
+            chanclaReviveTimer -= dt / 1000;
+            if (chanclaReviveTimer <= 0) {
+                resumeGameAfterRevive();
+            }
+            return;
+        }
 
         if (gameState === 'REVIVE_PROMPT') {
             reviveCountdown -= dt / 1000;
@@ -1439,8 +1636,17 @@
                 eventTv.active = true;
                 eventTv.timer = 0;
                 audioTvEvent.currentTime = 0;
-                audioTvEvent.volume = 0;
+                if (tvGainNode) tvGainNode.gain.value = 0; 
                 audioTvEvent.play().catch(e=>console.log(e));
+            }
+
+            if (lvl2Elapsed >= 30000 && !eventCar2.triggered) {
+                eventCar2.triggered = true;
+                eventCar2.active = true;
+                eventCar2.timer = 0;
+                audioCar2Event.currentTime = 9; 
+                if (car2GainNode) car2GainNode.gain.value = 0.8; 
+                audioCar2Event.play().catch(e=>console.log(e));
             }
         }
 
@@ -1459,11 +1665,27 @@
             else if (eventTv.timer <= 2800) alpha = 1.0;
             else if (eventTv.timer <= 4000) alpha = 1.0 - ((eventTv.timer - 2800) / 1200);
             
-            audioTvEvent.volume = Math.max(0, Math.min(1, alpha)) * 0.8; 
+            if (tvGainNode) {
+                tvGainNode.gain.setTargetAtTime(Math.max(0, Math.min(1, alpha)) * 0.8, audioCtx.currentTime, 0.1);
+            }
 
             if (eventTv.timer > 4000) {
                 eventTv.active = false;
                 audioTvEvent.pause();
+            }
+        }
+        if (eventCar2.active) {
+            eventCar2.timer += dt;
+            let t2 = eventCar2.timer / 1000;
+            
+            if (t2 >= 13.5 && t2 <= 13.8) { 
+                let alpha = (13.8 - t2) / 0.3;
+                if (car2GainNode) {
+                    car2GainNode.gain.setTargetAtTime(Math.max(0, Math.min(0.8, alpha * 0.8)), audioCtx.currentTime, 0.05);
+                }
+            } else if (t2 > 13.8) {
+                eventCar2.active = false;
+                audioCar2Event.pause();
             }
         }
 
@@ -1671,6 +1893,7 @@
         let isAnyPhoneActive = (level === 1 && phoneCenterActive) || (level >= 2 && (phoneLeftActive || phoneRightActive));
 
         for (let i = monsters.length - 1; i >= 0; i--) {
+	    if (gameState !== 'PLAYING') break;
             let m = monsters[i];
             
             let isDefended = false;
@@ -1686,6 +1909,7 @@
                 case 'WARNING':
                     m.timer -= dt;
                     if (m.timer <= 0) m.state = 'ATTACKING';
+                    if (Math.random() < 0.02 && synth.playWarning) synth.playWarning(m.attackSpeedMult);
                     break;
 
                 case 'ATTACKING':
@@ -1697,6 +1921,7 @@
                         m.progress += baseAttackSpeed * difficulty * m.attackSpeedMult;
                         m.wobble += dt * 0.02 * difficulty;
                         if (m.progress >= 1) handleDeath();
+                        if (Math.random() < 0.1 && synth.playAttack) synth.playAttack(m.attackSpeedMult);
                     }
                     break;
 
@@ -1721,11 +1946,14 @@
         synth.setReelActive(isAnyPhoneActive);
     }
 
-    function updateBatteryUI(el, val) {
-        el.style.width = `${val}%`;
-        if (val < 25) el.style.backgroundColor = '#ef4444'; 
-        else if (val < 50) el.style.backgroundColor = '#eab308'; 
-        else el.style.backgroundColor = '#4ade80';
+    function drawSingleChancla(ctx, dx, dy) {
+        ctx.save();
+        ctx.translate(dx, dy);
+        ctx.fillStyle = '#f3f4f6'; 
+        ctx.beginPath(); ctx.roundRect(0, 0, 15, 30, 5); ctx.fill();
+        ctx.strokeStyle = '#4b5563'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(0, 15); ctx.lineTo(7.5, 5); ctx.lineTo(15, 15); ctx.stroke();
+        ctx.restore();
     }
 
     function draw() {
@@ -1735,11 +1963,23 @@
         
         let shakeX = 0;
         let shakeY = 0;
+        
         if (eventCar.active) {
             let t = eventCar.timer / 1000;
             if ((t >= 8.2 && t < 8.35) || (t >= 8.7 && t < 8.85) || (t >= 9.2 && t < 9.35) || (t >= 9.7 && t < 9.85)) {
-                shakeX = (Math.random() - 0.5) * 12; 
-                shakeY = (Math.random() - 0.5) * 12;
+                shakeX += (Math.random() - 0.5) * 12; 
+                shakeY += (Math.random() - 0.5) * 12;
+            }
+        }
+        
+        if (eventCar2.active) {
+            let t2 = eventCar2.timer / 1000;
+            for (let i = 0; i < 8; i++) {
+                let shakeStart = 10 + (i * 0.5);
+                if (t2 >= shakeStart && t2 < shakeStart + 0.15) {
+                    shakeX += (Math.random() - 0.5) * 12; 
+                    shakeY += (Math.random() - 0.5) * 12;
+                }
             }
         }
 
@@ -1881,6 +2121,31 @@
                 ctx.fill();
             }
         }
+
+        if (eventCar2.active) {
+            let t = eventCar2.timer / 1000;
+            
+            if (t >= 3.0 && t <= 13.0) {
+                let prog = (t - 3.0) / 10.0; 
+                
+                let startX = -100;
+                let endX = 160;
+                let x = startX + (endX - startX) * prog;
+                let y = 220;
+
+                ctx.fillStyle = '#e6e6cc'; 
+                ctx.fillRect(x, y, 60, 25); 
+                ctx.fillRect(x + 15, y - 15, 35, 15); 
+                
+                ctx.fillStyle = 'rgba(255, 255, 150, 0.5)';
+                ctx.beginPath();
+                ctx.moveTo(x + 60, y + 10);
+                ctx.lineTo(x + 160, y - 10);
+                ctx.lineTo(x + 160, y + 30);
+                ctx.fill();
+            }
+        }
+
         ctx.restore(); 
 
         ctx.strokeStyle = colors.windowFrame; ctx.lineWidth = 10; ctx.strokeRect(30, 50, 120, 250);
@@ -1894,19 +2159,19 @@
         ctx.beginPath(); ctx.moveTo(280, 50); ctx.lineTo(180, 250); ctx.lineTo(420, 250); ctx.lineTo(320, 50); ctx.fill();
         ctx.globalAlpha = 1;
 
-        if (imgDoorPlaceholder.complete && imgDoorPlaceholder.naturalWidth > 0 && !imgDoorPlaceholder.src.includes("URL_IMAGEN_PUERTA_AQUI.png")) {
+        if (woodRoomEquipped && ENLACE_IMAGEN_PUERTA !== "" && imgDoorPlaceholder.complete) {
             ctx.drawImage(imgDoorPlaceholder, 450, 100, 120, 400);
         } else {
             ctx.fillStyle = colors.door; ctx.fillRect(450, 100, 120, 400); ctx.strokeRect(450, 100, 120, 400);
         }
         
-        if (imgTvPlaceholder.complete && imgTvPlaceholder.naturalWidth > 0 && !imgTvPlaceholder.src.includes("URL_IMAGEN_TELEVISOR_AQUI.png")) {
-            ctx.drawImage(imgTvPlaceholder, 10, 520, 110, 80);
+        if (ENLACE_IMAGEN_TV !== "" && imgTvPlaceholder.complete) {
+            ctx.drawImage(imgTvPlaceholder, 10, 480, 140, 110);
         } else {
-            ctx.fillStyle = colors.tvStand; ctx.fillRect(10, 520, 110, 80); 
-            ctx.fillStyle = colors.tvStandDetail; ctx.fillRect(15, 525, 100, 70);
-            ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.strokeRect(10, 520, 110, 80);
-            ctx.fillStyle = '#ff0000'; ctx.beginPath(); ctx.arc(105, 590, 2, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = colors.tvStand; ctx.fillRect(10, 480, 140, 110); 
+            ctx.fillStyle = colors.tvStandDetail; ctx.fillRect(15, 485, 130, 100);
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.strokeRect(10, 480, 140, 110);
+            ctx.fillStyle = '#ff0000'; ctx.beginPath(); ctx.arc(135, 575, 2, 0, Math.PI*2); ctx.fill();
         }
 
         if (eventChicken.active) {
@@ -1919,7 +2184,7 @@
             ctx.save();
             ctx.globalAlpha = Math.max(0, Math.min(1, alpha)) * 0.35;
             if (imgChicken.complete && imgChicken.naturalWidth > 0) {
-                ctx.drawImage(imgChicken, 15, 525, 100, 70);
+                ctx.drawImage(imgChicken, 15, 485, 130, 100);
             }
             ctx.restore();
         }
@@ -1934,13 +2199,35 @@
             ctx.save();
             ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
             if (imgTvEvent.complete && imgTvEvent.naturalWidth > 0) {
-                ctx.drawImage(imgTvEvent, 15, 525, 100, 70);
+                ctx.drawImage(imgTvEvent, 15, 485, 130, 100);
             }
             ctx.restore();
         }
 
         ctx.fillStyle = colors.bed; ctx.beginPath(); 
         ctx.moveTo(170, 800); ctx.lineTo(220, 630); ctx.lineTo(380, 630); ctx.lineTo(430, 800); ctx.fill();
+
+        let currentChanclas = (gameState === 'MENU' || gameState === 'GAMEOVER') ? chancletasOwned : chancletasActive;
+        let chanclasToDraw = currentChanclas;
+        let drawBlinking = false;
+        
+        if (gameState === 'CHANCLA_REVIVE' && chanclaReviveTimer > 1.0) {
+            if (Math.floor(Date.now() / 150) % 2 === 0) {
+                drawBlinking = true;
+            }
+        }
+
+        ctx.save();
+        ctx.translate(100, 730); 
+        
+        for(let i=0; i<chanclasToDraw; i++) {
+            drawSingleChancla(ctx, i * 25, i * 5);
+        }
+        if (drawBlinking) {
+            drawSingleChancla(ctx, chanclasToDraw * 25, chanclasToDraw * 5);
+        }
+        
+        ctx.restore();
     }
 
     function drawPhone(xOffset, isLit, tiltDir = 0, lightColor = '255, 255, 255') {
@@ -2228,6 +2515,7 @@
                 playerMonedas = data.monedas || 0;
                 
                 const inv = data.inventario || {};
+                
                 if (inv['imgPack1'] && inv['imgPack1'].owned) {
                     hasImagePack = true;
                     imagePackEquipped = inv['imgPack1'].equipped;
@@ -2243,6 +2531,10 @@
                     hasWoodRoom = false;
                     woodRoomEquipped = false;
                 }
+
+                chancletasOwned = 0;
+                if (inv['chancletas1'] && inv['chancletas1'].owned) chancletasOwned = 1;
+                if (inv['chancletas2'] && inv['chancletas2'].owned) chancletasOwned = 2;
                 
                 updateMonsterArray(); 
                 
@@ -2291,13 +2583,11 @@
             textAction.textContent = "Comprar";
             textPrice.textContent = imgPackCost + " 🪙";
             textPrice.classList.remove('hidden');
-            
             btnPack.disabled = playerMonedas < imgPackCost;
             btnPack.className = "btn !m-0 w-full flex flex-col items-center py-2";
         } else {
             textPrice.classList.add('hidden');
             btnPack.disabled = false;
-            
             if (imagePackEquipped) {
                 textAction.textContent = "DESEQUIPAR";
                 btnPack.className = "btn btn-red !m-0 w-full flex flex-col items-center py-3";
@@ -2315,13 +2605,11 @@
             textActionWood.textContent = "Comprar";
             textPriceWood.textContent = woodRoomCost + " 🪙";
             textPriceWood.classList.remove('hidden');
-            
             btnWood.disabled = playerMonedas < woodRoomCost;
             btnWood.className = "btn !m-0 w-full flex flex-col items-center py-2";
         } else {
             textPriceWood.classList.add('hidden');
             btnWood.disabled = false;
-            
             if (woodRoomEquipped) {
                 textActionWood.textContent = "DESEQUIPAR";
                 btnWood.className = "btn btn-red !m-0 w-full flex flex-col items-center py-3";
@@ -2329,6 +2617,32 @@
                 textActionWood.textContent = "EQUIPAR";
                 btnWood.className = "btn !bg-green-500 !text-black !m-0 w-full flex flex-col items-center py-3";
             }
+        }
+
+        const btnChancla = document.getElementById('btnBuyChancla');
+        const textActionChancla = document.getElementById('chanclaActionText');
+        const textPriceChancla = document.getElementById('chanclaPriceText');
+        const badgeChancla = document.getElementById('chanclaBadge');
+
+        badgeChancla.textContent = "Nvl. " + chancletasOwned;
+
+        if (chancletasOwned === 0) {
+            textActionChancla.textContent = "Comprar Nvl 1";
+            textPriceChancla.textContent = "1000 🪙";
+            textPriceChancla.classList.remove('hidden');
+            btnChancla.disabled = playerMonedas < 1000;
+            btnChancla.className = "btn !m-0 w-full flex flex-col items-center py-2";
+        } else if (chancletasOwned === 1) {
+            textActionChancla.textContent = "Comprar Nvl 2";
+            textPriceChancla.textContent = "1500 🪙";
+            textPriceChancla.classList.remove('hidden');
+            btnChancla.disabled = playerMonedas < 1500;
+            btnChancla.className = "btn !m-0 w-full flex flex-col items-center py-2";
+        } else {
+            textActionChancla.textContent = "Nivel Máximo";
+            textPriceChancla.classList.add('hidden');
+            btnChancla.disabled = true;
+            btnChancla.className = "btn !bg-gray-600 !text-gray-300 !m-0 w-full flex flex-col items-center py-3";
         }
     }
 
@@ -2349,7 +2663,6 @@
                     updateMonsterArray();
                     updateStoreUI();
                 }).catch(e => {
-                    console.log("Error comprando:", e);
                     btnPack.disabled = false;
                 });
             }
@@ -2363,7 +2676,6 @@
                 updateMonsterArray();
                 updateStoreUI();
             }).catch(e => {
-                console.log("Error equipando:", e);
                 btnPack.disabled = false;
             });
         }
@@ -2385,7 +2697,6 @@
                     updateCoinHUD();
                     updateStoreUI();
                 }).catch(e => {
-                    console.log("Error comprando:", e);
                     btnWood.disabled = false;
                 });
             }
@@ -2398,8 +2709,38 @@
                 woodRoomEquipped = nuevoEstado;
                 updateStoreUI();
             }).catch(e => {
-                console.log("Error equipando:", e);
                 btnWood.disabled = false;
+            });
+        }
+    }
+
+    function handleChanclaClick() {
+        const btnChancla = document.getElementById('btnBuyChancla');
+        btnChancla.disabled = true;
+
+        if (chancletasOwned === 0 && playerMonedas >= 1000) {
+            fetch(URL_GOOGLE_SCRIPT, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'buyItem', nombre: playerName, pin: playerPin, itemId: 'chancletas1', costo: 1000 })
+            }).then(() => {
+                playerMonedas -= 1000;
+                chancletasOwned = 1;
+                updateCoinHUD();
+                updateStoreUI();
+            }).catch(e => {
+                btnChancla.disabled = false;
+            });
+        } else if (chancletasOwned === 1 && playerMonedas >= 1500) {
+            fetch(URL_GOOGLE_SCRIPT, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'buyItem', nombre: playerName, pin: playerPin, itemId: 'chancletas2', costo: 1500 })
+            }).then(() => {
+                playerMonedas -= 1500;
+                chancletasOwned = 2;
+                updateCoinHUD();
+                updateStoreUI();
+            }).catch(e => {
+                btnChancla.disabled = false;
             });
         }
     }
@@ -2479,4 +2820,3 @@
 </script>
 </body>
 </html>
-
