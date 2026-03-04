@@ -1393,10 +1393,10 @@ function resumeGameAfterRevive() {
         windSound.play().catch(e => {});
         synth.resumeReelSystem();
         
-        if (eventCar.active) audioCar.play().catch(e=>{});
-        if (eventChicken.active) audioChicken.play().catch(e=>{});
-        if (eventTv.active) audioTvEvent.play().catch(e=>{});
-        if (eventCar2.active) audioCar2Event.play().catch(e=>{});
+	if (eventCar.active && eventCar.timer < 15000) audioCar.play().catch(e=>{});
+    if (eventChicken.active && eventChicken.timer < 5000) audioChicken.play().catch(e=>{});
+    if (eventTv.active && eventTv.timer < 4000) audioTvEvent.play().catch(e=>{});
+    if (eventCar2.active && eventCar2.timer < 13800) audioCar2Event.play().catch(e=>{});
 
         // ELIMINADO: requestAnimationFrame(gameLoop); <-- ¡Ya no duplicaremos el bucle!
     }
@@ -2835,5 +2835,6 @@ function resumeGameAfterRevive() {
 </script>
 </body>
 </html>
+
 
 
