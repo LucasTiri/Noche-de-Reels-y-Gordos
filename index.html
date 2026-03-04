@@ -1286,7 +1286,12 @@
         audioChicken.pause();
         audioTvEvent.pause();
         audioCar2Event.pause();
-        
+
+	if (eventCar.active) {
+  		// No reseteamos nada, solo pausamos el elemento HTML5
+   		audioCar.pause(); 
+	}
+		
         monsters = [];
         synth.playChanclaRevive();
     }
@@ -1301,6 +1306,11 @@
         audioChicken.pause();
         audioTvEvent.pause();
         audioCar2Event.pause();
+
+		if (eventCar.active) {
+  			// No reseteamos nada, solo pausamos el elemento HTML5
+   			audioCar.pause(); 
+		}
         
         const flash = document.getElementById('whiteFlash');
         flash.style.display = 'block';
@@ -2835,6 +2845,7 @@ function resumeGameAfterRevive() {
 </script>
 </body>
 </html>
+
 
 
 
