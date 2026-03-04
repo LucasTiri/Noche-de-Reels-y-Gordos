@@ -628,6 +628,8 @@
     let isReelPlaying = false;
     let playlistIndices = [];
     let currentPlaylistPos = 0;
+	let reelOffset = 0;          // Nueva: guarda el segundo exacto donde quedó el audio
+    let reelStartTime = 0;
 
     let tvGainNode = null;
     let reviveSource = null;
@@ -684,7 +686,7 @@
             isReelSystemActive = true;
             this.playNextReel();
         },
-        playNextReel: function() {
+        playNextReel: function(resume = false) {
             if (!isReelSystemActive || audioBuffers.reels.length === 0) return;
             
             if (currentReelSource) {
@@ -697,17 +699,23 @@
             currentReelSource.buffer = audioBuffers.reels[playlistIndices[currentPlaylistPos]];
             currentReelSource.connect(reelGainNode);
             
+            // Si no estamos reanudando, el offset es 0. Si reanudamos, usamos el guardado.
+            let startAt = resume ? reelOffset : 0;
+
             currentReelSource.onended = () => {
                 if (isReelSystemActive) {
                     currentPlaylistPos++;
-                    // ¡Si ya reprodujimos los 11 reels, volvemos a mezclar para la siguiente ronda!
+                    reelOffset = 0; // Reiniciar offset porque pasamos al siguiente
                     if (currentPlaylistPos >= audioBuffers.reels.length) {
                         this.shuffleReels();
                     }
                     this.playNextReel();
                 }
             };
-            currentReelSource.start();
+
+            // Guardamos el tiempo de inicio para saber cuánto avanzó después
+            reelStartTime = audioCtx.currentTime;
+            currentReelSource.start(0, startAt);
         },
         stopReelSystem: function() {
             isReelSystemActive = false;
@@ -716,20 +724,27 @@
                 try { currentReelSource.stop(); currentReelSource.disconnect(); } catch(e){}
                 currentReelSource = null;
             }
+            reelOffset = 0; // Limpieza total
         },
         pauseReelSystem: function() {
             if (currentReelSource) {
+                // Cálculo mágico: ¿Cuánto tiempo pasó desde que empezó el reel?
+                // Sumamos el avance actual al offset que ya traía.
+                reelOffset += (audioCtx.currentTime - reelStartTime);
+                
+                // Si justo terminó al pausar, evitamos errores de desbordamiento
+                if (reelOffset >= currentReelSource.buffer.duration) reelOffset = 0;
+
                 currentReelSource.onended = null;
                 try { currentReelSource.stop(); currentReelSource.disconnect(); } catch(e){}
                 currentReelSource = null;
             }
         },
         resumeReelSystem: function() {
-            // ¡AQUÍ ESTÁ LA MAGIA PARA REVIVIR! Volvemos a encender la variable principal.
             isReelSystemActive = true; 
             if (audioBuffers.reels.length > 0) {
-                // Al llamar playNextReel, arranca exactamente en el audio donde te habías quedado
-                this.playNextReel();
+                // Llamamos con true para que use el reelOffset guardado
+                this.playNextReel(true);
             }
         },
 
@@ -2820,4 +2835,5 @@ function resumeGameAfterRevive() {
 </script>
 </body>
 </html>
+
 
